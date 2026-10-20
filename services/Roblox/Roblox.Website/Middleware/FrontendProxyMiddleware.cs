@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Net.Http.Headers;
@@ -40,13 +41,11 @@ public class FrontendProxyMiddleware
         "/internal/report-abuse",
         "/internal/membership",
         "/internal/apply",
-        "/internal/invite",
         "/internal/dev",
         "/internal/faq",
         "/internal/donate",
         "/internal/place-update",
         "/internal/create-place",
-        "/internal/migrate-to-application",
         "/internal/collectibles",
         "/internal/contest/first-contest",
         "/auth/notapproved",
@@ -183,7 +182,26 @@ public class FrontendProxyMiddleware
             return;
         }
 #endif
-        var result = await ProxyRequestAsync(requestUrl);
+        HttpResponseMessage result;
+        try
+        {
+            result = await ProxyRequestAsync(requestUrl);
+        }
+        catch (Exception e) when (e is HttpRequestException or SocketException or TaskCanceledException)
+        {
+            // Frontend dev server is unreachable - don't let the exception escape the middleware.
+            Writer.Info(LogGroup.PerformanceDebugging,
+                "Frontend proxy could not reach localhost:3185 for {0}: {1}", requestUrl, e.Message);
+            ctx.Response.StatusCode = StatusCodes.Status502BadGateway;
+            ctx.Response.Headers.CacheControl = new CacheControlHeaderValue()
+            {
+                MaxAge = TimeSpan.Zero,
+                NoCache = true,
+            }.ToString();
+            ctx.Response.ContentType = "text/plain; charset=utf-8";
+            await ctx.Response.WriteAsync("Bad Gateway: the frontend server on localhost:3185 is not running.");
+            return;
+        }
         var str = await result.Content.ReadAsStreamAsync();
         // First, copy to memory
         var mem = new MemoryStream();

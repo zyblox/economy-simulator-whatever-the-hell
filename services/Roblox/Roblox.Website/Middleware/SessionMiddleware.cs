@@ -128,18 +128,6 @@ public class SessionMiddleware
                             return;
                         }
                     }
-                    // Check if user filled out new app
-                    var appStatus = await users.IsUserApproved(userInfo.userId);
-                    if (!appStatus && !userInfo.isAdmin && !userInfo.isModerator && !StaffFilter.IsOwner(userInfo.userId))
-                    {
-                        if (!currentPath.StartsWith("/auth/"))
-                        {
-                            authTimer.Stop();
-                            ctx.Response.StatusCode = 302;
-                            ctx.Response.Headers.Add("location", "/auth/application");
-                            return;
-                        }
-                    }
 
                     // robux increment
                     if (!currentPath.StartsWith("/thumbs/") && !currentPath.StartsWith("/images/"))

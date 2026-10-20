@@ -16,9 +16,6 @@ namespace Roblox.Website.Pages.Auth;
 
 public class Login : RobloxPageModel
 {
-    private const string ExpiredApplicationMessage = "For security reasons, this application has been expired. Please create a new application and try again.";
-    private const string BadApplicationMessage =
-        "This application is either not approved or has already been used. Please confirm the URL is correct, and try again.";
     private const string BadUsernameOrPasswordMessage = "Incorrect username or password. Please try again";
     private const string BadCaptchaMessage = "Your captcha could not be verified. Please try again.";
     private const string EmptyUsernameMessage = "Empty username";
@@ -36,8 +33,6 @@ public class Login : RobloxPageModel
     public string? password { get; set; }
     [FromForm(Name = "h-captcha-response")]
     public string? hCaptchaResponse { get; set; }
-    [BindProperty(SupportsGet = true)]
-    public string? applicationId { get; set; }
     public string? errorMessage { get; set; }
     public string siteKey => Configuration.HCaptchaPublicKey;
     public void OnGet()
@@ -177,25 +172,6 @@ public class Login : RobloxPageModel
         {
             errorMessage = LockedAccountMessage;
             return new PageResult();
-        }
-
-        if (applicationId != null)
-        {
-            var currentApplication = await services.users.GetApplicationByUserId(userId);
-            if (currentApplication is not {status: UserApplicationStatus.Approved})
-            {
-                var app = await services.users.GetApplicationByJoinId(applicationId);
-                var redeemable = services.users.CanRedeemApplication(app);
-                if (redeemable != ApplicationRedemptionFailureReason.Ok)
-                {
-                    errorMessage = redeemable == ApplicationRedemptionFailureReason.Expired
-                        ? ExpiredApplicationMessage
-                        : BadApplicationMessage;
-                    return new PageResult();
-                }
-
-                await services.users.SetApplicationUserIdByJoinId(applicationId, userId);
-            }
         }
 
         await CreateSessionAndSetCookie(userId);

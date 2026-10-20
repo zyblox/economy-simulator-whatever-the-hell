@@ -16,6 +16,11 @@
     <Folder Include="Public" />
   </ItemGroup>
 
+  <!-- Not part of the SDK's default content globs, but Program.cs loads it from the output directory. -->
+  <ItemGroup>
+    <Content Update="game-servers.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Roblox.AbuseDetection\Roblox.AbuseDetection.csproj" />
     <ProjectReference Include="..\Roblox.Configuration\Roblox.Configuration.csproj" />

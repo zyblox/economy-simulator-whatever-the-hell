@@ -16,6 +16,8 @@ namespace Roblox.Website.Middleware;
 
 public class ApplicationGuardMiddleware
 {
+    private static readonly Regex RobloxPlayerDataRegex =
+    new Regex(@"^/users/\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static string authorization { get; set; }
     public const string AuthorizationHeaderName = "rblx-authorization";
     public const string AuthorizationCookieName = "rblx-authorization";
@@ -32,10 +34,8 @@ public class ApplicationGuardMiddleware
         "/auth/password-reset",
         "/auth/contact",
         "/auth/account-deletion",
-        "/auth/application",
         "/auth/signup",
         "/auth/ticket",
-        "/auth/application-check",
         // razor public
         "/unsecuredcontent/",
         // gs

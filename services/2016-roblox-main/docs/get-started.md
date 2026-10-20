@@ -28,4 +28,3 @@
 **How do I change the port?**
 
 Either set the "PORT" environmental variable to the port number you want to use, or run `next dev -p 1000` or `next start -p 1000` (replacing 1000 with the port you want to use). More info is available here: [stackoverflow.com/questions/60147499/how-to-set-port-in-next-js](https://stackoverflow.com/questions/60147499/how-to-set-port-in-next-js)
-
