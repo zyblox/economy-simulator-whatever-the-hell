@@ -49,7 +49,7 @@ public class Captcha : RobloxPageModel
                 Secure = true,
             });
             Roblox.Metrics.ApplicationGuardMetrics.ReportCaptchaSuccessForUserAgent(ua);
-            return new RedirectResult("/auth/home");
+            return new RedirectResult("/auth/login");
         }
         
         return Page();

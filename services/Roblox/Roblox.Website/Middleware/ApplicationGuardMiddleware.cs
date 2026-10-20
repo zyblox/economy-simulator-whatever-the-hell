@@ -27,7 +27,6 @@ public class ApplicationGuardMiddleware
         "/auth/captcha",
         "/auth/discord",
         "/auth/submit",
-        "/auth/home",
         "/auth/privacy",
         "/auth/tos",
         "/auth/login",
@@ -249,14 +248,14 @@ public class ApplicationGuardMiddleware
     private readonly string[] allowedPathsForBlockUserAgents = new[]
     {
         "",
-        "/auth/home",
+        "/auth/login",
         "/auth/captcha",
     };
 
     private async Task Redirect(HttpContext ctx, string dest)
     {
         ctx.Response.StatusCode = 302;
-        ctx.Response.Headers.Location = "/auth/home";
+        ctx.Response.Headers.Location = dest;
         await ctx.Response.WriteAsync("Object moved to <a href=\""+dest+"\">here</a>.");
     }
     
@@ -380,13 +379,13 @@ public class ApplicationGuardMiddleware
             // If not blocked
             if (FeatureFlags.IsDisabled(FeatureFlag.AllowAccessToAllRequests))
             {
-                await Redirect(ctx, "/auth/home");
+                await Redirect(ctx, "/auth/login");
                 return;
             }
             // Otherwise, allow (almost) all
             if (normalizedPath == "")
             {
-                await Redirect(ctx, "/auth/home");
+                await Redirect(ctx, "/auth/login");
                 return;
             }
             appGuardTimer.Stop();

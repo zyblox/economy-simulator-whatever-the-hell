@@ -1,0 +1,89 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Wrapper so game-server can drive the *Windows* RCCService.exe under Wine.
+#
+# game-server spawns:  <dir>/rcc -Console -Port <port> -Content <unixPath>
+#
+# Two things this build of RCCService.exe does differently from the Linux `rcc`
+# binary that game-server was written for:
+#
+#   1. It requires a real console. Started with plain pipes it blocks forever
+#      before binding anything (no conhost.exe is ever created), so we allocate
+#      a PTY for it via `script`.
+#   2. It has no -Port switch (only -Console, -Content:, -PlaceId:, -url, ...),
+#      so it binds a random port. We read the port it actually bound out of its
+#      console output and forward the port game-server asked for to it.
+# ---------------------------------------------------------------------------
+set -u
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR" || exit 1
+
+REQPORT=""
+CONTENT=""
+EXTRA=()
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-Port)    REQPORT="$2"; shift 2 ;;
+		-Content) CONTENT="$2";  shift 2 ;;
+		*)        EXTRA+=("$1"); shift ;;
+	esac
+done
+
+# Wine maps Z: -> /, so a unix path becomes Z:\path
+to_wine() { echo "Z:${1%/}" | sed 's/\//\\/g'; }
+
+CMD="flatpak run org.winehq.Wine RCCService.exe"
+for a in "${EXTRA[@]}"; do CMD+=" $(printf '%q' "$a")"; done
+[ -n "$CONTENT" ] && CMD+=" -Content:$(printf '%q' "$(to_wine "$CONTENT")")"
+
+LOG="$(mktemp -t rcc.XXXXXX)"
+
+TAILPID=""
+SOCATPID=""
+cleanup() {
+	[ -n "$TAILPID" ]  && kill "$TAILPID"  2>/dev/null
+	[ -n "$SOCATPID" ] && kill "$SOCATPID" 2>/dev/null
+	wait 2>/dev/null
+}
+trap 'cleanup; exit 143' INT TERM
+
+# 1. start RCCService under a PTY; its console output lands in $LOG
+script -qefc "$CMD" "$LOG" >/dev/null 2>&1 &
+SCRIPTPID=$!
+
+# 2. wait for it to announce the port it bound
+ACTUAL=""
+for _ in $(seq 1 240); do
+	ACTUAL="$(grep -aoE 'Service Started on port [0-9]+' "$LOG" 2>/dev/null | tail -1 | grep -oE '[0-9]+$')"
+	[ -n "$ACTUAL" ] && break
+	kill -0 "$SCRIPTPID" 2>/dev/null || break
+	sleep 0.5
+done
+
+if [ -z "$ACTUAL" ]; then
+	echo "[rcc-wrapper] RCCService never reported a port" >&2
+	cat "$LOG" >&2
+	kill "$SCRIPTPID" 2>/dev/null
+	wait 2>/dev/null
+	rm -rf "$LOG"
+	exit 1
+fi
+echo "[rcc-wrapper] RCCService bound port $ACTUAL (requested ${REQPORT:-none})"
+
+# 3. relay RCC's console output to game-server's stdout
+tail -f "$LOG" &
+TAILPID=$!
+
+# 4. forward the port game-server expects onto the port RCC actually used
+if [ -n "$REQPORT" ] && [ "$REQPORT" != "$ACTUAL" ]; then
+	socat TCP-LISTEN:"$REQPORT",fork,reuseaddr TCP:127.0.0.1:"$ACTUAL" &
+	SOCATPID=$!
+fi
+
+# 5. stay alive until RCC exits, then tear everything down
+wait "$SCRIPTPID"
+STATUS=$?
+cleanup
+rm -f "$LOG" 2>/dev/null
+exit "$STATUS"

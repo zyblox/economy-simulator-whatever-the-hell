@@ -642,6 +642,10 @@ export default class CommandHandler extends StdExceptions {
 	private RunningJobIds: string[] = [];
 	private JobQueueRunningCount = 0;
 	private RenderRcc: IGameEntry[] = [];
+	// RCCService.exe is effectively a singleton per Wine prefix: a second
+	// instance exits immediately. Share one in-flight creation so concurrent
+	// render requests reuse a single RCC instead of racing to spawn duplicates.
+	private rccCreation: Promise<IGameEntry> | null = null;
 	public addToQueue(item: IQueueEntry): void {
 		this.JobQueue.push(item);
 		console.log('[info] addToQueue. queue length =', this.JobQueue.length, 'rcc runner count =', this.JobQueueRunningCount, 'rcc instance count =', this.RenderRcc.length);
@@ -671,6 +675,15 @@ export default class CommandHandler extends StdExceptions {
 				}
 			}
 		}
+		if (!this.rccCreation) {
+			this.rccCreation = this.spawnRenderRcc().finally(() => {
+				this.rccCreation = null;
+			});
+		}
+		return this.rccCreation;
+	}
+
+	private async spawnRenderRcc(): Promise<IGameEntry> {
 		console.log('[info] no applicable RCC instances for render, will create one');
 		const id = this.randomId();
 		const port = 0;
@@ -762,7 +775,25 @@ export default class CommandHandler extends StdExceptions {
 				}
 				this.JobQueue = this.JobQueue.filter(v => v.jobId !== item.jobId);
 				this.RunningJobIds.push(item.jobId);
-				let rcc = await this.GetRccForRender();
+				let rcc: IGameEntry;
+				try {
+					rcc = await this.GetRccForRender();
+				} catch (e) {
+					// RCC failed to start (or died mid-boot). Requeue and back off
+					// instead of letting the rejection escape and killing the server.
+					console.error('[error] [jq] could not obtain RCC for render:', e && (e as Error).message ? (e as Error).message : e);
+					if (this.RunningJobIds.includes(item.jobId)) {
+						if (Date.now() - item.createdAt > 2 * 60 * 1000) {
+							console.warn('[warn] [jq] dropping job', item.jobId, 'because it has been retried for over 2m');
+							this.RunningJobIds = this.RunningJobIds.filter(v => v !== item.jobId);
+						} else {
+							this.JobQueue = [item, ...this.JobQueue];
+							this.RunningJobIds = this.RunningJobIds.filter(v => v !== item.jobId);
+						}
+					}
+					await sleep(3000);
+					continue;
+				}
 				let msSinceCreation = Date.now() - item.createdAt;
 				// because we are an async function, we should be able to guarantee that doesCallbackExist will only ever return false if 2 minutes has passed, not if the callback was never created in the first place.
 				if (!doesCallbackExist(item.jobId)) {
