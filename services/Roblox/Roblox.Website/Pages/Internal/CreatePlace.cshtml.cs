@@ -13,6 +13,7 @@ public class CreatePlace : RobloxPageModel
 {
     public string? errorMessage { get; set; }
     public string? successUrl { get; set; }
+    public bool bypassActive => FeatureFlags.IsEnabled(FeatureFlag.CreatePlaceBypassEligibility);
     
     public void OnGet()
     {
@@ -128,13 +129,6 @@ public class CreatePlace : RobloxPageModel
             log.Info("user is not wearing any limited or for-sale items, has no trade history, and does not own a group");
             return false;
         }
-
-        var postCount = await services.forums.GetPostCount(userId);
-        if (postCount < 2)
-        {
-            log.Info("user post count is less than 2");
-            return false;
-        }
 #endif
         Writer.Info(LogGroup.AbuseDetection, "User passed IsActiveEnoughForPlace: {0}", userId);
 
@@ -238,7 +232,7 @@ public class CreatePlace : RobloxPageModel
                 "Your account is too new. Try again when your account is at least 7 days old.",
             PlaceCreationFailureReason.TooManyPlaces => "Your account already has the maximum amount of places on it.",
             PlaceCreationFailureReason.NoApplication => "You cannot create a place if you did not join through the application system.",
-            PlaceCreationFailureReason.TooInactive => "Your account is too inactive to create a place. Staff cannot comment on the exact reason, so please do not ask. Try playing around some more, posting on places like the forums, joining groups, buying items, then try again in a few days.",
+            PlaceCreationFailureReason.TooInactive => "Your account is too inactive to create a place. Staff cannot comment on the exact reason, so please do not ask. Try playing around some more, joining groups, buying items, then try again in a few days.",
             PlaceCreationFailureReason.LatestPlaceCreatedTooRecently => "Latest place was created too recently. Try again in a day.",
             PlaceCreationFailureReason.NotEnoughVisitsForNewPlace => "You do not have enough visits to create a new place. Try again in a few days.",
             _ => "Unknown reason. Code = " + reason.ToString(),
@@ -270,7 +264,9 @@ public class CreatePlace : RobloxPageModel
             return;
         }
 
-        var createStatus = await CanCreatePlace(userSession.userId);
+        var createStatus = FeatureFlags.IsEnabled(FeatureFlag.CreatePlaceBypassEligibility)
+            ? PlaceCreationFailureReason.Ok
+            : await CanCreatePlace(userSession.userId);
         if (createStatus != PlaceCreationFailureReason.Ok)
         {
             errorMessage = GetMessage(createStatus);
@@ -282,6 +278,6 @@ public class CreatePlace : RobloxPageModel
         // create universe too
         await services.games.CreateUniverse(asset.placeId);
         // give url
-        successUrl = "https://example.com/internal/place-update?id=" + asset.placeId;
+        successUrl = Roblox.Configuration.BaseUrl + "/places/" + asset.placeId + "/update";
     }
 }

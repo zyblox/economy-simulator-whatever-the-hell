@@ -16,26 +16,45 @@
     });
 
     const quickConfig = (arr) => {
-        let promises = [];
-                for (const perm of arr) {
-                    if (permissions.find(a => a.permission === perm)) continue;
-                    promises.push(client.request({
-                        method: 'POST',
-                        url: '/staff/permissions/?userId=' + userId + "&permission=" + perm,
-                    }));
-                }
-                Promise.all(promises).then(() => {
-                    let newPermissions = [...permissions];
-                    for (const item of arr) {
-                        newPermissions.push({
-                            permission: item,
-                            userId: parseInt(userId, 10),
-                        });
-                    }
-                    permissions = newPermissions;
-                }).catch(e => {
-                    alert(e.message);
-                })
+        const toAdd = arr.filter(perm => !permissions.find(a => a.permission === perm));
+        if (!toAdd.length) return;
+        Promise.all(toAdd.map(perm => client.request({
+            method: 'POST',
+            url: '/staff/permissions/?userId=' + userId + '&permission=' + perm,
+        }))).then(() => {
+            permissions = [
+                ...permissions,
+                ...toAdd.map(item => ({
+                    permission: item,
+                    userId: parseInt(userId, 10),
+                })),
+            ];
+        }).catch(e => {
+            alert(e.message);
+        })
+    }
+
+    const grantAdmin = () => {
+        if (!permissionsAvailable.length) {
+            alert('The permission list has not loaded yet, try again in a second.');
+            return;
+        }
+        if (!confirm(`Grant every permission to user ${userId}?`)) return;
+        quickConfig([...permissionsAvailable]);
+    }
+
+    const revokeAll = () => {
+        const current = [...permissions];
+        if (!current.length) return;
+        if (!confirm(`Remove all ${current.length} permissions from user ${userId}?`)) return;
+        Promise.all(current.map(p => client.request({
+            method: 'DELETE',
+            url: '/staff/permissions?userId=' + userId + '&permission=' + p.permission,
+        }))).then(() => {
+            permissions = [];
+        }).catch(e => {
+            alert(e.message);
+        })
     }
 
 </script>
@@ -99,6 +118,12 @@
             }}>Add Permission</button>
         </div>
         <div class="col-12 mt-4">
+            <h3>Admin</h3>
+            <p class="mb-0">One click grant/revoke of every permission in the system for this user.</p>
+            <button class="btn btn-success mt-3" on:click={grantAdmin}>Grant Admin (All Permissions)</button>
+            <button class="btn btn-danger mt-3 ms-2" on:click={revokeAll}>Revoke All Permissions</button>
+        </div>
+        <div class="col-12 mt-4">
             <h3>Quick Config</h3>
             <button class="btn btn-primary mt-4" on:click={() => {
                 const permissions = ['GetStats', 'GetPendingGroupIcons', 'GetAssetModerationDetails', 'GetPendingModerationItems', 'GetPendingModerationGameIcons', 'SetGameIconModerationStatus', 'SetAssetModerationStatus', 'SetGroupIconModerationStatus', 'GetDetailsFromThumbnail'];
@@ -106,7 +131,7 @@
                 quickConfig(permissions);
             }}>Image Mod</button>
             <button class="btn btn-primary mt-4 ml-2" on:click={() => {
-                const permissions = ['GetStats', 'GetAllAssetComments', 'DeleteComment', 'GetGroupWall', 'DeleteGroupWallPost', 'GetGroupStatus', 'DeleteGroupStatus', 'GetAllUserStatuses', 'DeleteUserStatus', 'DeleteForumPost'];
+                const permissions = ['GetStats', 'GetAllAssetComments', 'DeleteComment', 'GetGroupWall', 'DeleteGroupWallPost', 'GetGroupStatus', 'DeleteGroupStatus', 'GetAllUserStatuses', 'DeleteUserStatus'];
 
                 quickConfig(permissions);
             }}>Text Mod</button>

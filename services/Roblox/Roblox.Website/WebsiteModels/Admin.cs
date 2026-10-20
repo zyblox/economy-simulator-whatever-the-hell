@@ -117,11 +117,6 @@ public class DeleteUsernameRequest
     public long userId { get; set; }
 }
 
-public class DeleteForumPostRequest
-{
-    public long postId { get; set; }
-}
-
 public class ReRenderRequest
 {
     public long assetId { get; set; }

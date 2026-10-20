@@ -32,7 +32,7 @@ const PlayButton = props => {
     if (getFlag('launchUsingEsURI', false)) {
       e && e.preventDefault && e.preventDefault();
       if (!auth.isAuthenticated) {
-        window.location.href = '/Login';
+        window.location.href = '/auth/login';
         return
       }
       launchGame({

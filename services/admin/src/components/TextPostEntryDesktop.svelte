@@ -19,32 +19,7 @@
 	};
 </script>
 
-{#if post.type === "ForumPost"}
-	<tr>
-		<td>
-			<a href={`/Forum/ShowPost.aspx?PostID=${post.threadId || post.postId}`}>
-				{post.postId}
-			</a>
-		</td>
-		<td>{post.title ? "Thread: " + post.title : "Post Reply to " + post.threadId}</td>
-		<td>{post.post}</td>
-		<td>
-			<a use:link href={`/admin/manage-user/${post.userId}`}>
-				{post.username}
-			</a>
-		</td>
-		<td>
-			<div class="btn-group btn-group-sm">
-				<button
-					class="btn btn-danger btn-sm"
-					on:click={() => {
-						deletePostUi(post);
-					}}>Delete</button
-				>
-			</div>
-		</td>
-	</tr>
-{:else if post.type === "AssetComment"}
+{#if post.type === "AssetComment"}
 	<tr>
 		<td>
 			<a href={`/catalog/${post.assetId}/--`}>

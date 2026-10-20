@@ -56,12 +56,6 @@
 			permission: 'GetAllAssetComments',
 		},
 		{
-			name: 'Forums',
-			link: '/admin/forums',
-			icon: BookIcon,
-			permission: 'LockForumThread',
-		},
-		{
 			name: "Asset Moderation",
 			link: "/admin/asset/approval",
 			icon: CheckSquareIcon,

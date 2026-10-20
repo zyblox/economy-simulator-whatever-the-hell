@@ -56,6 +56,11 @@ public class PlaceUpdate : RobloxPageModel
     
     public async Task<IActionResult> OnGet()
     {
+        // old links used ?id= instead of ?placeId=
+        if (placeId == 0 && long.TryParse(Request.Query["id"], out var parsedId))
+            placeId = parsedId;
+        if (placeId == 0)
+            return new RedirectResult("/develop");
         return new RedirectResult("/places/" + placeId + "/update");
     }
 

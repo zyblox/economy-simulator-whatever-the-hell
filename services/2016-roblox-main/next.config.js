@@ -29,6 +29,33 @@ module.exports = {
         destination: '/My/Groups.aspx?gid=:id',
         permanent: false,
       },
+      // auth lives on the backend now - these pages are gone
+      {
+        source: '/login',
+        destination: '/auth/login',
+        permanent: false,
+      },
+      {
+        source: '/Login',
+        destination: '/auth/login',
+        permanent: false,
+      },
+      {
+        source: '/signup',
+        destination: '/auth/signup',
+        permanent: false,
+      },
+      {
+        source: '/account/signupredir',
+        destination: '/auth/signup',
+        permanent: false,
+      },
+      // forums are gone - old forum links go to discord
+      {
+        source: '/Forum/:path*',
+        destination: 'https://discord.gg/VtM6vAX5jV',
+        permanent: false,
+      },
     ]
   },
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {

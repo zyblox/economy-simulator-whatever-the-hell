@@ -54,6 +54,10 @@ public enum FeatureFlag
     WebsiteChat,
     PasswordReset,
     TradePreventAcceptanceIfTooManyCopies,
+    // Skips every eligibility gate on /internal/create-place (account age, activity,
+    // friends, spend, place limits, cooldowns, visits). Does NOT affect the
+    // CreatePlaceSelfService master switch.
+    CreatePlaceBypassEligibility,
 }
 
 public static class FeatureFlags

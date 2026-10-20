@@ -42,6 +42,10 @@
                     You should understand that everything here is still experimental. A lot of APIs, such as DataStoreService and HttpService, do not work or are not available.
                 </li>
             </ul>
+            @if (Model.bypassActive)
+            {
+                <p class="mt-4 text-warning"><span class="fw-bold">Eligibility requirements are bypassed</span> (feature flag CreatePlaceBypassEligibility is enabled), so any logged-in account can create a place.</p>
+            }
             <div class="mt-4">
                 <p>To actually create a place, click the button below. If your account is not eligible, you will be given an error message detailing the problem.</p>
                 <form method="post">

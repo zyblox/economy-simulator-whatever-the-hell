@@ -185,14 +185,10 @@ public class AdminApiController : ControllerBase
     [HttpPost("staff/permissions"), StaffFilter(Access.SetPermissions)]
     public async Task SetUserPermissions(long userId, Access permission)
     {
-        if (permission == Access.SetPermissions)
-        {
-            // TOOD: log this
+        // Only the configured owner may hand out permissions (SetPermissions included,
+        // otherwise an admin could never pass the permission on to anyone else).
+        if (!StaffFilter.IsOwner(safeUserSession.userId))
             throw new StaffException("InternalServerError");
-        }
-
-        if (safeUserSession.userId != 12)
-            throw new Exception("InternalServerError");
 
         await services.users.AddStaffPermission(userId, permission);
     }
@@ -1595,36 +1591,6 @@ Thank you for your understanding,
         });
     }
     
-    [HttpPost("delete-forum-post"), StaffFilter(Access.DeleteForumPost)]
-    public async Task DeleteForumPost([Required, FromBody] DeleteForumPostRequest request)
-    {
-        var details = await db.QuerySingleOrDefaultAsync("SELECT id, thread_id FROM forum_post WHERE id = :id", new
-        {
-            id = request.postId,
-        });
-        if (details == null)
-            throw new StaffException("Post does not exist");
-        if (details.thread_id == null)
-        {
-            await db.ExecuteAsync("DELETE FROM forum_post WHERE id = :id OR thread_id = :id",
-                new { id = request.postId });
-        }
-        else
-        {
-            await db.ExecuteAsync("UPDATE forum_post SET post = '[ Content Deleted ]' WHERE id = :id",
-                new { id = request.postId });
-        }
-    }
-
-    [HttpPost("lock-forum-thread"), StaffFilter(Access.LockForumThread)]
-    public async Task LockForumThread(long threadId)
-    {
-        await db.ExecuteAsync("UPDATE forum_post SET is_locked = true WHERE id = :id AND thread_id IS NULL", new
-        {
-            id = threadId,
-        });
-    }
-
     [HttpPost("lottery/run"), StaffFilter(Access.RunLottery)]
     public async Task<dynamic> RunLottery()
     {
@@ -2348,7 +2314,6 @@ Thank you for your understanding,
     [HttpGet("text-moderation/get-latest"), StaffFilter(Access.GetAllAssetComments)]
     public async Task<dynamic> GetLatestIdsForTextMod()
     {
-        var forumPosts = await services.forums.GetAllPosts(0, 1, "desc", null);
         var comments = await GetAllAssetComments(1, 0, "desc");
         var wall = await GetAllWallPosts(1, 0, "desc");
         var status = await GetAllUserStatuses(0, 1, "desc");
@@ -2356,7 +2321,6 @@ Thank you for your understanding,
 
         return new
         {
-            ForumPost = forumPosts.Last().postId,
             AssetComment = comments.Last().id,
             GroupWallPost = wall.Last().id,
             UserStatusPost = status.Last().id,
@@ -2623,20 +2587,18 @@ Thank you for your understanding,
             clock = DateTime.UtcNow,
         }));
         
-        var forumPosts = await services.forums.GetAllPosts(0, 100, "desc", null);
         var comments = await GetAllAssetComments(100, 0, "desc");
         var wall = await GetAllWallPosts(100, 0, "desc");
         var status = await GetAllUserStatuses(0, 100, "desc");
         var groupStatus = await GetGroupStatuses(0, 100, "desc");
 
-        var validForumPosts = forumPosts.Count(c => c.createdAt > lastClock);
         var validComments = comments.Count(c => c.createdAt > lastClock);
         var validWall = wall.Count(c => c.createdAt > lastClock);
         var validStatus = status.Count(c => c.createdAt > lastClock);
         var validGroupStatus = groupStatus.Count(c => c.created_at > lastClock);
         const int robuxMultiplier = 5;
 
-        var robuxAmount = (validComments + validForumPosts + validWall + validStatus + validGroupStatus);
+        var robuxAmount = (validComments + validWall + validStatus + validGroupStatus);
         if (robuxAmount == 0)
             return new
             {

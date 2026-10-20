@@ -31,10 +31,9 @@ import FeatureFlags from "./pages/FeatureFlags.svelte";
 import ManageUserTransactions from "./pages/ManageUserTransactions.svelte";
 import Applications from "./pages/Applications.svelte";
 import Reference from "./pages/Reference.svelte";
-import ForumPosts from "./pages/TextModeration.svelte";
+import TextPosts from "./pages/TextModeration.svelte";
 import Groups from "./pages/Groups.svelte";
 import GameHistory from "./pages/GameHistory.svelte";
-import Forums from "./pages/Forums.svelte";
 import ManageUserTrades from "./pages/ManageUserTrades.svelte";
 import TrackUserAsset from "./pages/TrackUserAsset.svelte";
 import AbuseReports from "./pages/AbuseReports.svelte";
@@ -146,16 +145,13 @@ import Permissions from "./pages/Permissions.svelte";
 			<Reference />
 		</Route>
 		<Route path="/admin/text-posts">
-			<ForumPosts />
+			<TextPosts />
 		</Route>
 		<Route path="/admin/groups">
 			<Groups />
 		</Route>
 		<Route path="/admin/game-history">
 			<GameHistory />
-		</Route>
-		<Route path="/admin/forums">
-			<Forums />
 		</Route>
 		<Route path="/admin/asset/track">
 			<TrackUserAsset />

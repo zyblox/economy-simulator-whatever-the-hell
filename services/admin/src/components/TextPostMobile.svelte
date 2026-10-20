@@ -35,30 +35,7 @@
     }
 </script>
 
-{#if post.type === "ForumPost"}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card card-body">
-                <p class="mb-0">{post.post}</p>
-                <details>
-                    {#if post.title}
-                        <p class="fw-bold">Thread: {post.title}</p>
-                    {:else}
-                        <p class="fw-bold">Reply to <a target='_blank' href={`/Forum/ShowPost.aspx?PostID=${post.threadId}`}>{post.threadId}</a></p>
-                    {/if}
-                    <p class="mb-0">By <a use:link href={`/admin/manage-user/${post.userId}`}>
-                        {post.username}
-                    </a>
-                    </p>
-                    <summary class="pointer opacity-50">Details</summary>
-                </details>
-                <div>
-                    <button class="btn btn-sm btn-danger mt-4" on:click={onDelete(post)}>Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
-{:else if post.type === 'AssetComment'}
+{#if post.type === 'AssetComment'}
 <div class="row mb-4">
     <div class="col-12">
         <div class="card card-body">

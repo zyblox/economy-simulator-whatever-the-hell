@@ -37,22 +37,29 @@ const useStyles = createUseStyles({
 
 /**
  * Nav sidebar link entry
- * @param {{count?: number; name: string; icon: string; url: string;}} props 
+ * @param {{count?: number; name: string; icon: string; url: string; external?: boolean;}} props 
  * @returns 
  */
 const LinkEntry = props => {
   const s = useStyles();
+  const inner = <a className={s.link}
+    href={props.external ? props.url : undefined}
+    target={props.external ? '_blank' : undefined}
+    rel={props.external ? 'noopener noreferrer' : undefined}>
+    <div className={s.wrapper + ' hover-' + props.icon}>
+      <p className={s.linkEntry}>
+        <span className={props.icon}></span> <span className={s.name}>{props.name}</span>
+        {props.count && <span className={s.countWrapper}>
+        <span className={s.count}>{formatCount(props.count)}</span>
+      </span> || null}
+      </p>
+    </div>
+  </a>;
+  // next/link is only for internal routes - external urls need a plain anchor
+  if (props.external)
+    return inner;
   return <Link href={props.url}>
-    <a className={s.link}>
-      <div className={s.wrapper + ' hover-' + props.icon}>
-        <p className={s.linkEntry}>
-          <span className={props.icon}></span> <span className={s.name}>{props.name}</span>
-          {props.count && <span className={s.countWrapper}>
-          <span className={s.count}>{formatCount(props.count)}</span>
-        </span> || null}
-        </p>
-      </div>
-    </a>
+    {inner}
   </Link>
 }
 

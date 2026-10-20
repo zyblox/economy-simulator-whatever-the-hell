@@ -215,8 +215,6 @@ public class FrontendProxyMiddleware
         var cacheable = contentType != null && result.IsSuccessStatusCode && (
                 contentType.Contains("application/javascript") ||
                 contentType.Contains("text/html"));
-        if (requestUrl.ToLower().StartsWith("/forum/"))
-            cacheable = false;
 
         if (cacheable)
         {

@@ -1,9 +1,5 @@
 import React from "react";
 import { createUseStyles } from "react-jss";
-import LoginModalStore from "../../../stores/loginModal";
-import LoginModal from "../../loginModal";
-import getFlag from "../../../lib/getFlag";
-import {useRouter} from "next/dist/client/router";
 
 const useLoginAreaStyles = createUseStyles({
   text: {
@@ -29,39 +25,27 @@ const useLoginAreaStyles = createUseStyles({
   },
 });
 
+// Login/Signup are handled by the backend auth pages, so always do a full
+// page load - a client side route push would miss them and 404.
 const LoginArea = props => {
-  const Router = useRouter();
   const s = useLoginAreaStyles();
-  const loginModalStore = LoginModalStore.useContainer();
 
   return <div className='row'>
     <div className='col-6 offset-6'>
       <div className='row'>
         <div className='col-6'>
           <p className={s.text}>
-            <a className={s.link}>
+            <a className={s.link} href='/auth/signup'>
               Sign Up
             </a>
           </p>
         </div>
         <div className='col-6'>
           <p className={s.text}>
-            <a className={s.link} onClick={(e) => {
-              e.preventDefault();
-              if (getFlag('requireLoginThroughCookie', true)) {
-                if (getFlag('clientSideRenderingEnabled', false)) {
-                  Router.push('/login');
-                }else{
-                  window.location.href = '/login';
-                }
-                return;
-              }
-              loginModalStore.setOpen(!loginModalStore.open);
-            }}>
+            <a className={s.link} href='/auth/login'>
               Login
             </a>
           </p>
-          {loginModalStore.open && <LoginModal></LoginModal>}
         </div>
       </div>
     </div>
