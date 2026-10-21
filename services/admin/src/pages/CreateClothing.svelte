@@ -55,8 +55,8 @@
 			</select>
 		</div>
 		<div class="col-12 mt-4 mb-4">
-			<label for="rbxm">Clothing Texture</label>
-			<input type="file" class="form-control" id="texture" />
+			<label for="rbxm">Clothing Texture (PNG or JPEG)</label>
+			<input type="file" class="form-control" id="texture" accept="image/png,image/jpeg,.png,.jpg,.jpeg" />
 		</div>
 		<div class="col-12">
 			<h3>Economy</h3>
@@ -83,11 +83,14 @@
 					let bodyFormData = new FormData();
 					bodyFormData.append("name", document.getElementById("name").value);
 					bodyFormData.append("description", document.getElementById("description").value);
-					bodyFormData.append("type", document.getElementById("assettype").value);
+					// CreateClothingRequest binds `assetTypeId` and `file` - the previous
+					// "type"/"texture" field names never bound, so the server always
+					// answered "No file specified".
+					bodyFormData.append("assetTypeId", document.getElementById("assettype").value);
 					bodyFormData.append("genre", document.getElementById("assetgenre").value);
 					bodyFormData.append("price", document.getElementById("price").value);
 					bodyFormData.append("isForSale", document.getElementById("is_for_sale").checked ? "true" : "false");
-					bodyFormData.append("texture", document.getElementById("texture").files[0]);
+					bodyFormData.append("file", document.getElementById("texture").files[0]);
 					disabled = true;
 					request
 						.post("/asset/create/clothing", bodyFormData)

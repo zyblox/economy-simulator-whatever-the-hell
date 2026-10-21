@@ -281,15 +281,12 @@ public class AssetsService : ServiceBase, IService
             return null;
         }
 
-        if (type is Models.Assets.Type.Pants or Models.Assets.Type.Shirt)
+        if (type is Models.Assets.Type.Pants or Models.Assets.Type.Shirt or Models.Assets.Type.TeeShirt)
         {
-            // Must be these exact dimensions
-            if (img.width == 585 && img.height == 559)
-                return img;
-        }
-
-        if (type == Models.Assets.Type.TeeShirt)
+            // Accept any PNG/JPEG - the engine stretches the texture onto the R6
+            // layout, and enforcing exactly 585x559 rejected valid templates.
             return img;
+        }
 
         return null;
     }
