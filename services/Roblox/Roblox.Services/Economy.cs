@@ -63,8 +63,9 @@ public class EconomyService : ServiceBase, IService
             });
         if (exists.total == 0)
         {
+            // ON CONFLICT DO NOTHING in case two requests race to create the entry
             await db.ExecuteAsync(
-                "INSERT INTO group_economy (group_id, balance_robux, balance_tickets) VALUES (:group_id, 0, 0)", new
+                "INSERT INTO group_economy (group_id, balance_robux, balance_tickets) VALUES (:group_id, 0, 0) ON CONFLICT DO NOTHING", new
                 {
                     group_id = groupId,
                 });
@@ -75,9 +76,15 @@ public class EconomyService : ServiceBase, IService
     {
         var result = await db.QuerySingleOrDefaultAsync<UserEconomy?>(
             "SELECT balance_robux As robux, balance_tickets as tickets FROM group_economy WHERE group_id = :group_id", new { group_id = groupId });
-        // Some early users have no economy
+        // Some groups have no economy entry (e.g. created before group economy existed); create it on demand.
         if (result == null)
-            throw new Exception("User does not have an economy entry");
+        {
+            await CreateGroupBalanceIfRequired(groupId);
+            result = await db.QuerySingleOrDefaultAsync<UserEconomy?>(
+                "SELECT balance_robux As robux, balance_tickets as tickets FROM group_economy WHERE group_id = :group_id", new { group_id = groupId });
+        }
+        if (result == null)
+            throw new Exception("Group does not have an economy entry");
         return result;
     }
 
