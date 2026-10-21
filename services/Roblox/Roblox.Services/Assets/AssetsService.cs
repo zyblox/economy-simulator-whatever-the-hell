@@ -774,6 +774,11 @@ public class AssetsService : ServiceBase, IService
             case Models.Assets.Type.MeshPart:
                 thumbRequests.Add(CreateMeshThumbnail(assetId, cancellationToken));
                 break;
+            case Models.Assets.Type.Model:
+                // rbxmx inserted into the render scene like hats; migrated models
+                // carry their own ThumbnailCamera part for framing
+                thumbRequests.Add(CreateAssetThumbnail(assetId, cancellationToken));
+                break;
             case Type.Hat:
             case Type.Gear:
             case Type.HairAccessory:
