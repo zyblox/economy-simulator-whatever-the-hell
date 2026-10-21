@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using System.Xml.Linq;
+using Dapper;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Net.Http.Headers;
 using Roblox.Dto.Persistence;
@@ -528,7 +529,10 @@ namespace Roblox.Website.Controllers
             var ip = "1.1.1.1";
             var port = 1111;
 #if DEBUG
-            serverAddress = "localhost:53640";
+            // serverData.domain is already "<domain>:<game port>" in DEBUG builds (see GameServerPort.ApplyIdToUrl);
+            // don't hardcode localhost here - clients on other machines can't reach it.
+            if (!serverAddress.Contains(':'))
+                serverAddress += ":53640";
 #endif
 
             var placeId = serverData.placeId;
@@ -853,6 +857,40 @@ namespace Roblox.Website.Controllers
         {
             ValidateBotAuthorization();
             return await MigrateItem.MigrateItemFromRoblox(assetId, true, 5, new List<Models.Assets.Type>() { Models.Assets.Type.TeeShirt, Models.Assets.Type.Shirt, Models.Assets.Type.Pants });
+        }
+
+        /// <summary>
+        /// Re-run thumbnail generation for every asset in the catalog (bulk re-render).
+        /// Renders are awaited per asset so the response reports the true outcome.
+        /// </summary>
+        [HttpGetBypass("botapi/re-render-assets")]
+        public async Task<dynamic> ReRenderAssetsBot()
+        {
+            ValidateBotAuthorization();
+            // NOTE: do not alias these columns - PostgreSQL folds unquoted aliases to
+            // lowercase ("assetId" -> "assetid") and DapperRow lookup is case-sensitive,
+            // which made row.assetId resolve to null.
+            var rows = (await services.assets.db.QueryAsync(
+                "SELECT id, asset_type FROM asset ORDER BY id")).ToList();
+            var rendered = 0;
+            var failed = 0;
+            var errors = new List<string>();
+            foreach (var row in rows)
+            {
+                long assetId = row.id;
+                int assetType = row.asset_type;
+                try
+                {
+                    await services.assets.RenderAssetAsync(assetId, (Type) assetType);
+                    rendered++;
+                }
+                catch (Exception e)
+                {
+                    failed++;
+                    errors.Add(assetId + " (" + assetType + "): " + e.Message);
+                }
+            }
+            return new { total = rows.Count, rendered, failed, errors };
         }
 
         [HttpGetBypass("/apisite/clientsettings/Setting/QuietGet/ClientAppSettings")]

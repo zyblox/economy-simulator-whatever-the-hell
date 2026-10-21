@@ -2,7 +2,8 @@ local jobId = "InsertJobIdHere";
 local assetId = 65789275746246;
 local assetType = 358843;
 local mode = "R6";
-local baseURL = "http://localhost";
+local baseURL = "https://zyblox.jimhasaburger.com";
+local goToAsset = "/asset/?id=";
 local uploadURL = "UPLOAD_URL_HERE";
 local ScriptContext = game:GetService("ScriptContext");
 local Lighting = game:GetService('Lighting');
@@ -16,23 +17,24 @@ game:GetService('ThumbnailGenerator').GraphicsMode = 2;
 HttpService.HttpEnabled = true;
 ScriptContext.ScriptsDisabled = true
 Lighting.Outlines = false
-ContentProvider:SetBaseUrl('http://localhost')
+ContentProvider:SetBaseUrl(baseURL)
 print(ContentProvider.BaseUrl)
-game:GetService("ContentProvider"):SetAssetUrl(baseURL .. "/Asset/")
-game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
-pcall(function() game:GetService("ScriptInformationProvider"):SetAssetUrl(url .. "/Asset/") end)
+game:GetService("ContentProvider"):SetAssetUrl(baseURL)
+game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/")
+pcall(function() game:GetService("ScriptInformationProvider"):SetAssetUrl(url .. "/asset/") end)
 game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
 Players:SetChatFilterUrl(baseURL .. "/Game/ChatFilter.ashx")
 local Insert = game:GetService("InsertService")
-game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
-game:GetService("InsertService"):SetAssetVersionUrl(baseURL .. "/Asset/?assetversionid=%d")
+game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/?id=%d")
+game:GetService("InsertService"):SetAssetVersionUrl(baseURL .. "/asset/?assetversionid=%d")
 
     local function render(id)
 
         print("[debug] render image - type",assetType, "id",assetId)
-        local assetUrl = "rbxassetid://" .. assetId;
+        local assetUrl = baseURL .. goToAsset .. assetId;
         if assetType == 18 then
-            local ok, image = pcall(function() 
+            assetUrl = baseURL .. goToAsset .. assetId
+            local ok, image = pcall(function()
                 return Insert:LoadAsset(assetId):GetChildren()[1]
             end)
             print("LoadAsset() pcall over - result",ok,image)

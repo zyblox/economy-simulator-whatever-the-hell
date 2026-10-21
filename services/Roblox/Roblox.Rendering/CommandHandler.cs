@@ -284,6 +284,19 @@ namespace Roblox.Rendering
                 contentId,
             }, cancellationToken);
         }
+
+        /// <summary>
+        /// Re-encode plain image bytes to a PNG thumbnail via the render service's
+        /// sharp pipeline. Does not involve RCC (ClickTexture cannot resolve rbxassetid://
+        /// in this build, so Image/Decal/Face thumbnails used to hang forever).
+        /// </summary>
+        public static async Task<Stream> RequestImageThumbnail(string contentBase64, CancellationToken? cancellationToken = null)
+        {
+            return await SendCmdWithErrHandlingAsync("GenerateThumbnailImage", new List<dynamic>
+            {
+                contentBase64,
+            }, cancellationToken);
+        }
     }
 }
 

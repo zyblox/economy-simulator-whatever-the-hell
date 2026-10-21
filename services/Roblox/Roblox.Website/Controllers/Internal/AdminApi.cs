@@ -23,6 +23,7 @@ using Roblox.Dto.Groups;
 using Roblox.Dto.Staff;
 using Roblox.Dto.Users;
 using Roblox.Exceptions;
+using Roblox.Libraries;
 using Roblox.Logging;
 using Roblox.Models.AbuseReport;
 using Roblox.Models.Assets;
@@ -1968,6 +1969,27 @@ Thank you for your understanding,
         };
     }
 
+    /// <summary>
+    /// Builds a model file containing a Decal whose Texture points at <paramref name="imageAssetId"/>.
+    /// This is what a Face asset has to look like for clients to wear it (the character's
+    /// "face" is a Decal child of the Head whose texture is a separate Image asset).
+    /// </summary>
+    private static Stream BuildDecalModel(long imageAssetId)
+    {
+        var xml =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<roblox xmlns:xmime=\"http://www.w3.org/2005/05/xmlmime\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.roblox.com/roblox.xsd\" version=\"4\">\n" +
+            "    <Item class=\"Decal\" referent=\"RBXDECALFACE01\">\n" +
+            "        <Properties>\n" +
+            "            <string name=\"Name\">face</string>\n" +
+            "            <token name=\"Face\">5</token>\n" +
+            $"            <string name=\"Texture\">rbxassetid://{imageAssetId}</string>\n" +
+            "        </Properties>\n" +
+            "    </Item>\n" +
+            "</roblox>";
+        return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml));
+    }
+
     [HttpPost("asset/create"), StaffFilter(Access.CreateAsset)]
     public async Task<dynamic> CreateAsset([Required, FromForm] CreateAssetRequest request)
     {
@@ -2024,15 +2046,43 @@ Thank you for your understanding,
         if (request.rbxm != null)
         {
             var fileData = request.rbxm.OpenReadStream();
-            // TODO: we should probably be validating audio and image uploads...
-            if (request.assetTypeId != Type.Audio && request.assetTypeId != Type.Image)
+            // Face assets may be uploaded as a plain PNG/JPEG. Clients expect a face to be a
+            // model containing a Decal, so store the image as its own Image asset and wrap it
+            // in a Decal model pointing at that image - same idea as the clothing flow.
+            Imager? imageProbe = null;
+            if (request.assetTypeId == Type.Face)
             {
-                var isOk = await services.assets.ValidateAssetFile(fileData, request.assetTypeId);
-                if (!isOk)
-                    throw new StaffException("The asset file doesn't look correct. Please try again.");
+                try
+                {
+                    imageProbe = await services.assets.ValidateClothing(fileData, Type.TeeShirt);
+                }
+                catch (Exception)
+                {
+                    // not an image at all - fall through to model validation below
+                }
+                fileData.Position = 0;
             }
-            fileData.Position = 0;
-            file = fileData;
+            if (request.assetTypeId == Type.Face && imageProbe != null)
+            {
+                var faceImage = await services.assets.CreateAsset(request.rbxm.FileName,
+                    $"{request.assetTypeId} Image", 1, CreatorType.User, 1, fileData, Type.Image, Genre.All,
+                    ModerationStatus.ReviewApproved, DateTime.UtcNow, DateTime.UtcNow);
+                file = BuildDecalModel(faceImage.assetId);
+            }
+            else
+            {
+                // TODO: we should probably be validating audio and image uploads...
+                if (request.assetTypeId != Type.Audio && request.assetTypeId != Type.Image)
+                {
+                    var isOk = await services.assets.ValidateAssetFile(fileData, request.assetTypeId);
+                    if (!isOk)
+                        throw new StaffException(request.assetTypeId == Type.Face
+                            ? "Faces must be an .rbxm containing a Decal, or a plain PNG/JPEG image file."
+                            : "The asset file doesn't look correct. Please try again.");
+                }
+                fileData.Position = 0;
+                file = fileData;
+            }
         }
 
         var assetDetails = await services.assets.CreateAsset(request.name, request.description, 1,

@@ -892,6 +892,18 @@ export default class CommandHandler extends StdExceptions {
 		return buff.toString('base64');
 	}
 
+	/**
+	 * Generate a thumbnail from plain image bytes (Image assets, or the image a
+	 * Decal/Face model points at). Pure sharp re-encode to PNG - never touches RCC.
+	 * @param contentBase64 base64-encoded source image (png/jpeg/gif)
+	 * @returns base64-encoded PNG
+	 */
+	public async GenerateThumbnailImage(contentBase64: string): Promise<string> {
+		const input = Buffer.from(contentBase64, 'base64');
+		const output = await sharp(input).png().toBuffer();
+		return output.toString('base64');
+	}
+
 	public async GenerateThumbnailMesh(assetId: number): Promise<string> {
 		const job = this.createSoapRequest(
 			scripts.meshThumbnail

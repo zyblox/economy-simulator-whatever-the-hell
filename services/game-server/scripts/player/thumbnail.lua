@@ -16,6 +16,14 @@ HttpService.HttpEnabled = true;
 ScriptContext.ScriptsDisabled = true
 Lighting.Outlines = false
 ContentProvider:SetBaseUrl('http://localhost')
+-- URL setup was missing entirely in this script (headshot.lua has it); without it every
+-- InsertService/ContentProvider fetch resolves against http://localhost/ (port 80, dead),
+-- so clothing/faces/hats never load: "CURL error Couldn't connect to server (7)"
+game:GetService("ContentProvider"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
+game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
+game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
+game:GetService("Players"):SetChatFilterUrl(baseURL .. "/Game/ChatFilter.ashx")
+game:GetService("InsertService"):SetAssetVersionUrl(baseURL .. "/Asset/?assetversionid=%d")
 local Insert = game:GetService("InsertService")
 
 local function applyMesh(Player, children, limb)

@@ -3,7 +3,7 @@ const app = express();
 const axios = require('axios').default;
 const replacer = require('./lib/replaceUrls');
 const port = 3200;
-const url = `localhost:${port}`;
+const url = `zyblox.jimhasaburger.com`;
 const apiSitesToSkip = [
     'ecsv2',
     'locale',

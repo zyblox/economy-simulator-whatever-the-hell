@@ -94,8 +94,15 @@ public class ErrorController : ControllerBase
             });
         }
 #if DEBUG
-        var firstError = errorList.First();
-        firstError.message = firstError.message + "\n" + exception?.Message + "\n" + exception?.StackTrace;
+        // Only append diagnostics for genuine server errors - expected failures (validation,
+        // permissions, ...) already carry a useful message, and dumping a stack trace on top of
+        // them just makes the UI unreadable. StaffException is a validation-style failure even
+        // though it reports 500, so exclude it explicitly.
+        if (code == HttpStatusCode.InternalServerError && exception is not StaffException)
+        {
+            var firstError = errorList.First();
+            firstError.message = firstError.message + "\n" + exception?.Message + "\n" + exception?.StackTrace;
+        }
 #endif
 
         HttpContext.Response.StatusCode = (int)code;

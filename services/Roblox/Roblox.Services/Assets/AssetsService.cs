@@ -415,6 +415,120 @@ public class AssetsService : ServiceBase, IService
         var key = await UploadAssetContent(response, Configuration.ThumbnailsDirectory, "png");
         await InsertOrReplaceThumbnail(assetId, latestVersion.assetVersionId, key, ModerationStatus.ReviewApproved);
     }
+
+    /// <summary>
+    /// Thumbnail for a plain Image asset: re-encode to PNG through the render service's
+    /// sharp pipeline (same path t-shirts use). RCC is intentionally not involved -
+    /// ThumbnailGenerator:ClickTexture cannot resolve rbxassetid:// in this build
+    /// (empty URL base config), which made every Image thumbnail hang forever.
+    /// </summary>
+    private async Task CreateImageAssetThumbnail(long assetId, CancellationToken? cancellationToken = null)
+    {
+        var latestVersion = await GetLatestAssetVersion(assetId);
+        if (latestVersion.contentUrl == null)
+            throw new Exception("Latest asset version has no contentUrl");
+        var content = await GetAssetContent(latestVersion.contentUrl);
+        await using var contentMs = new MemoryStream();
+        await content.CopyToAsync(contentMs);
+        var response = await Rendering.CommandHandler.RequestImageThumbnail(
+            Convert.ToBase64String(contentMs.ToArray()), cancellationToken);
+        var key = await UploadAssetContent(response, Configuration.ThumbnailsDirectory, "png");
+        await InsertOrReplaceThumbnail(assetId, latestVersion.assetVersionId, key, ModerationStatus.ReviewApproved);
+    }
+
+    /// <summary>
+    /// Decal/Face assets are models wrapping a Decal whose Texture points at a plain
+    /// Image asset. Resolve that image from the model bytes and thumbnail it directly
+    /// (sharp, no RCC). Falls back to the old RCC texture render only if the model
+    /// cannot be parsed at all.
+    /// </summary>
+    private async Task CreateDecalBackedThumbnail(long assetId, Models.Assets.Type assetType, CancellationToken? cancellationToken = null)
+    {
+        var latestVersion = await GetLatestAssetVersion(assetId);
+        if (latestVersion.contentUrl == null)
+            throw new Exception("Latest asset version has no contentUrl");
+        var content = await GetAssetContent(latestVersion.contentUrl);
+        await using var contentMs = new MemoryStream();
+        await content.CopyToAsync(contentMs);
+        var bytes = contentMs.ToArray();
+
+        Stream? imageStream = IsProbablyImage(bytes) ? new MemoryStream(bytes) : null;
+        if (imageStream == null)
+        {
+            var referencedId = FindReferencedAssetId(bytes);
+            if (referencedId != null)
+            {
+                try
+                {
+                    var imageVersion = await GetLatestAssetVersion(referencedId.Value);
+                    if (imageVersion.contentUrl != null)
+                        imageStream = await GetAssetContent(imageVersion.contentUrl);
+                }
+                catch (RecordNotFoundException)
+                {
+                    // fall through to the RCC fallback below
+                }
+            }
+        }
+
+        if (imageStream == null)
+        {
+            Writer.Info(LogGroup.AssetRender,
+                "could not resolve image for {0} asset {1}, falling back to RCC texture render", assetType, assetId);
+            await CreateAssetTextureThumbnail(assetId, assetType, cancellationToken);
+            return;
+        }
+
+        await using var imageMs = new MemoryStream();
+        await imageStream.CopyToAsync(imageMs);
+        var response = await Rendering.CommandHandler.RequestImageThumbnail(
+            Convert.ToBase64String(imageMs.ToArray()), cancellationToken);
+        var key = await UploadAssetContent(response, Configuration.ThumbnailsDirectory, "png");
+        await InsertOrReplaceThumbnail(assetId, latestVersion.assetVersionId, key, ModerationStatus.ReviewApproved);
+    }
+
+    private static bool IsProbablyImage(byte[] bytes)
+    {
+        if (bytes.Length < 4) return false;
+        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return true; // PNG
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return true; // JPEG
+        if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) return true; // GIF
+        return false;
+    }
+
+    /// <summary>
+    /// Scans raw file bytes for an rbxassetid://&lt;id&gt; reference. Works for rbxmx XML
+    /// and for binary rbxm as long as the string property is stored uncompressed.
+    /// </summary>
+    private static long? FindReferencedAssetId(byte[] bytes)
+    {
+        var needle = System.Text.Encoding.ASCII.GetBytes("rbxassetid://");
+        for (var i = 0; i + needle.Length < bytes.Length; i++)
+        {
+            var matched = true;
+            for (var j = 0; j < needle.Length; j++)
+            {
+                if (bytes[i + j] != needle[j])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+            if (!matched) continue;
+            var pos = i + needle.Length;
+            long value = 0;
+            var hasDigits = false;
+            while (pos < bytes.Length && bytes[pos] >= '0' && bytes[pos] <= '9')
+            {
+                if (value > long.MaxValue / 10) { value = 0; hasDigits = false; break; }
+                value = value * 10 + (bytes[pos] - (byte) '0');
+                hasDigits = true;
+                pos++;
+            }
+            if (hasDigits && value > 0) return value;
+        }
+        return null;
+    }
     
     private async Task CreatePackageThumbnail(long assetId, CancellationToken? cancellationToken = null)
     {
@@ -608,9 +722,14 @@ public class AssetsService : ServiceBase, IService
         switch (assetType)
         {
             case Models.Assets.Type.Image:
+                // Plain image - re-encode via sharp, no RCC (ClickTexture is broken in
+                // this build: rbxassetid:// resolves against an empty URL base).
+                thumbRequests.Add(CreateImageAssetThumbnail(assetId, cancellationToken));
+                break;
             case Models.Assets.Type.Decal:
             case Models.Assets.Type.Face:
-                thumbRequests.Add(CreateAssetTextureThumbnail(assetId, assetType, cancellationToken));
+                // Model wrapping a Decal -> resolve its Texture image, then sharp.
+                thumbRequests.Add(CreateDecalBackedThumbnail(assetId, assetType, cancellationToken));
                 break;
             // clothing
             case Models.Assets.Type.Shirt:

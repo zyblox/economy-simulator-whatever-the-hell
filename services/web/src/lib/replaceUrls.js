@@ -8,7 +8,7 @@ const replacer = (data, newUrl) => {
     if (urlNoPort.indexOf(':') !== -1) {
         urlNoPort = urlNoPort.slice(0, urlNoPort.indexOf(':'));
     }
-    return data.replace(/([a-z0-9]+)\.roblox\.com/g, `${newUrl}/apisite/$1`).replace(/https:\/\/localhost/g, 'http://' + urlNoPort);
+    return data.replace(/([a-z0-9]+)\.roblox\.com/g, `${newUrl}/apisite/$1`).replace(/https?:\/\/localhost(:[0-9]+)?/g, 'https://' + urlNoPort);
 }
 
 module.exports = replacer;

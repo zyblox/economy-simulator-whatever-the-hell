@@ -2,6 +2,10 @@ import axios from 'axios';
 import getConfig from 'next/config';
 import { fromUrl, parseDomain, ParseResultType } from 'parse-domain';
 import { getBaseUrl } from '../../lib/request';
+
+// host that proxied cookies should be scoped to (the public site, e.g. zyblox.jimhasaburger.com)
+const cookieHost = new URL(getBaseUrl()).host;
+
 const UrlUtilities = (() => {
   const getDomainFromUrl = (url) => {
     const baseDomainParsed = parseDomain(fromUrl(url));
@@ -67,12 +71,12 @@ const actualHandler = async (req, res) => {
     for (const item of Object.getOwnPropertyNames(result.headers)) {
       let value = result.headers[item];
       if (item === 'set-cookie') {
-        // TODO: "localhost" needs to be configurable
+        // TODO: "cookie host" needs to be configurable
         if (typeof value === 'string') {
-          value = value.replace(/roblox\.com/g, 'localhost');
+          value = value.replace(/roblox\.com/g, cookieHost);
         } else {
           value.forEach((v, i, arr) => {
-            arr[i] = v.replace(/roblox\.com/g, 'localhost');
+            arr[i] = v.replace(/roblox\.com/g, cookieHost);
           });
         }
       }
