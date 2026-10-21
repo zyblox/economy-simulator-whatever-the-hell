@@ -29,10 +29,27 @@ game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
         end
         model.Parent = game.Workspace
 
-        local cam = model:FindFirstDescendant("ThumbnailCamera")
+        -- FindFirstDescendant does not exist in this engine build (Trunk2012),
+        -- so resolve the camera with FindFirstChild like the reference does.
+        local assetModel
+        for _, v in pairs(model:GetChildren()) do
+            if v:IsA("Accessory") or v:IsA("Tool") or v:IsA("Hat") then
+                assetModel = v
+            end
+        end
+        local cam
+        if assetModel then
+            cam = assetModel:FindFirstChild("ThumbnailCamera")
+        end
+        if not cam then
+            cam = model:FindFirstChild("ThumbnailCamera")
+        end
         if cam then
             print("[info] use thumbnail camera")
-            cam.Parent = game.Workspace:GetChildren()[1];
+            cam.Parent = model
+        else
+            local camera = Instance.new("Camera", model)
+            workspace.CurrentCamera = camera
         end
 
         print("[debug] render test asset")
