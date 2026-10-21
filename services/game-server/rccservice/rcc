@@ -39,9 +39,6 @@ for a in "${EXTRA[@]}"; do CMD+=" $(printf '%q' "$a")"; done
 
 LOG="$(mktemp -t rcc.XXXXXX)"
 
-# TEMP DIAGNOSIS: trace file opens to find where ContentProvider's temp-cache read fails.
-export WINEDEBUG="${WINEDEBUG:+$WINEDEBUG:}+file"
-
 TAILPID=""
 SOCATPID=""
 cleanup() {
