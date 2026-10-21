@@ -1,10 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createUseStyles } from "react-jss";
 import { getBaseUrl, getFullUrl } from "../../../../lib/request";
-import { getCreatedItems, uploadAsset } from "../../../../services/develop";
+import { getCreatedItems, getCreatedAssetDetails, uploadAsset } from "../../../../services/develop";
+import { searchCatalog } from "../../../../services/catalog";
 import AuthenticationStore from "../../../../stores/authentication";
 import ActionButton from "../../../actionButton";
 import AssetList from "../assetList";
+
+// assetType -> singular asset type name understood by /v1/search/items
+// (resolved server-side through Enum.TryParse)
+const searchTypeMap = {
+  1: 'Image',
+  2: 'TeeShirt',
+  3: 'Audio',
+  11: 'Shirt',
+  12: 'Pants',
+}
 
 const detailsMap = {
   2: {
@@ -95,6 +106,28 @@ const Clothing = props => {
 
   useEffect(() => {
     setAssetList(null);
+    if (props.library) {
+      // Library mode: every creator's items of this type, on-sale or not.
+      searchCatalog({
+        category: 'All',
+        subCategory: searchTypeMap[id],
+        limit: 100,
+        cursor: '',
+        sort: '0',
+        includeNotForSale: true,
+      }).then(sr => {
+        const ids = (sr && sr.data ? sr.data : []).map(v => v.id);
+        if (ids.length === 0) {
+          setAssetList({ data: [] });
+          return null;
+        }
+        return getCreatedAssetDetails(ids).then(res => {
+          // get-asset-details returns typeId; AssetList expects assetType
+          setAssetList({ data: res.data.map(v => ({ ...v, assetType: v.typeId })) });
+        });
+      }).catch(() => setAssetList({ data: [] }));
+      return;
+    }
     if (!auth.userId && !groupId) return;
     getCreatedItems({
       limit: 100,
@@ -104,7 +137,7 @@ const Clothing = props => {
     }).then(d => {
       setAssetList(d);
     });
-  }, [auth.userId, id, groupId]);
+  }, [auth.userId, id, groupId, props.library]);
 
   const s = useStyles();
 
@@ -130,7 +163,9 @@ const Clothing = props => {
     <div className='col-12 mt-4'>
       {assetList ? (
         assetList.data.length === 0 ?
-          <p>You haven't created any {details.namePlural.toLowerCase()}.</p>
+          <p>{props.library
+            ? `No ${details.namePlural.toLowerCase()} have been uploaded yet.`
+            : `You haven't created any ${details.namePlural.toLowerCase()}.`}</p>
           : <AssetList assets={assetList.data}/>
       ) : null}
     </div>
