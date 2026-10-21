@@ -211,6 +211,38 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
         script.setAttribute("src", "WebPlayer.js");
         body.append(script);
     }
+
+    // The player runtime is ~38MB (WebPlayer.js + .wasm + .data). Start pulling it
+    // into the HTTP cache the moment this page opens, so that by the time the user
+    // clicks Start - and by the time the backend boots a game server for us - the
+    // files are already local. Without this the game server's first-join grace
+    // period can expire while we are still downloading.
+    var RBX_preloadPromise = null;
+    function RBX_preloadRuntime() {
+        if (RBX_preloadPromise) return RBX_preloadPromise;
+        var files = ["WebPlayer.js", "WebPlayer.wasm", "WebPlayer.data"];
+        RBX_preloadPromise = Promise.all(files.map(function (file) {
+            return fetch(file, { cache: "force-cache" }).then(function (resp) {
+                if (!resp.ok) throw new Error("GET " + file + " failed with HTTP " + resp.status);
+                if (!resp.body || !resp.body.getReader) return resp.arrayBuffer();
+                // Read the whole body so the browser commits it to the HTTP cache,
+                // but stream the chunks away so we never hold 38MB in memory.
+                var reader = resp.body.getReader();
+                function drain() {
+                    return reader.read().then(function (result) {
+                        if (result.done) return undefined;
+                        return drain();
+                    });
+                }
+                return drain();
+            });
+        })).catch(function (err) {
+            console.warn("[preload] runtime preload failed, will retry on start:", err);
+            RBX_preloadPromise = null;
+        });
+        return RBX_preloadPromise;
+    }
+    RBX_preloadRuntime();
     
     var featureErrorMessages = {
         errDuringDetection: "There was an error detecting supported features by your browser. The game may still work, although it is unlikely.",
@@ -387,6 +419,9 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
             localStorage.setItem("rbx_touch_controls", touchEnabled.value.toString());
             localStorage.setItem("rbx_msaa", msaaSetting.value.toString());
             wrapper.remove();
+
+            // retry/finish the background runtime download before we ask for a server
+            RBX_preloadRuntime();
 
             var ticketMessage = document.createElement("p");
             ticketMessage.setAttribute("class", "loading-text");

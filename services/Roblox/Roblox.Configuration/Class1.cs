@@ -35,6 +35,11 @@ public static class Configuration
     public const string UserAgentBypassSecret = "503534DA-F2F8-4681-9B37-15EE9EAE88DC4D0FAE23-F672-4BC6-8D5F-E35A2939680DB1980985-AF9C-4B2E-B19E-67005FBAD27B";
     public static long PackageShirtAssetId { get; set; }
     public static long PackagePantsAssetId { get; set; }
+    /// <summary>
+    ///     Site owner. This account automatically owns every item and sends a friend request
+    ///     to every new account.
+    /// </summary>
+    public static long OwnerUserId { get; set; } = 1;
     private static IEnumerable<long>? _SignupAssetIds { get; set; }
 
     public static IEnumerable<long> SignupAssetIds

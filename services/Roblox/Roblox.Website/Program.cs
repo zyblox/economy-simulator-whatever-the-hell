@@ -67,7 +67,8 @@ Roblox.Configuration.SignupAvatarAssetIds =
 Roblox.Configuration.RobloxAppPrefix = "rbxeconsimdev:";
 #endif
 FeatureFlags.StartUpdateFlagTask();
-Roblox.Website.Filters.StaffFilter.Configure(long.Parse(configuration.GetSection("OwnerUserId").Value));
+Roblox.Configuration.OwnerUserId = long.Parse(configuration.GetSection("OwnerUserId").Value);
+Roblox.Website.Filters.StaffFilter.Configure(Roblox.Configuration.OwnerUserId);
 Roblox.Website.Controllers.ThumbnailsControllerV1.StartThumbnailFixLoop();
 
 // Add services to the container.
@@ -162,6 +163,14 @@ if (!string.IsNullOrWhiteSpace(Roblox.Configuration.WebClientDirectory) &&
         {
             ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
             ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+
+            // The player runtime is ~38MB; without caching every join re-downloads
+            // all of it. The html itself must always revalidate so client updates
+            // don't get stuck behind the cache.
+            var path = ctx.Context.Request.Path.Value ?? "";
+            var isHtml = path.EndsWith("/") || path.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
+            ctx.Context.Response.Headers[HeaderNames.CacheControl] =
+                isHtml ? "no-cache" : "public,max-age=604800";
         },
     });
 }

@@ -39,6 +39,8 @@ public class AvatarService : ServiceBase, IService
 
     public async Task<IEnumerable<long>> GetRecentItems(long userId)
     {
+        using var users = ServiceProvider.GetOrCreate<UsersService>(this);
+        await users.EnsureOwnerHasEveryItem(userId);
         var result =
             await db.QueryAsync(
                 "SELECT distinct asset_id, max(id) FROM user_asset WHERE user_id = :user_id GROUP BY asset_id ORDER BY max(id) DESC, asset_id LIMIT 50",
@@ -164,6 +166,8 @@ public class AvatarService : ServiceBase, IService
             }).ToList();
             // Finally, confirm user actually owns each assetId
             // goodAssetIds is a list of assets the user owns
+            using var users = ServiceProvider.GetOrCreate<UsersService>(this);
+            await users.EnsureOwnerHasEveryItem(userId);
             var goodAssetIds = new List<long>();
             foreach (var id in assetIds)
             {

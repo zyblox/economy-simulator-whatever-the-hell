@@ -1472,7 +1472,10 @@ WHERE asset_type = :asset_type AND asset.id < :id AND NOT asset.is_18_plus ORDER
             else if (cat is "featured")
             {
                 doIdSort = true;
-                builder.Where("asset.creator_id = 1").Where("asset.creator_type = 1");
+                // Featured = official (creator 1) plus staff-created items (any user_permission row,
+                // mirroring StaffFilter.IsStaff; owner is creator 1 already).
+                builder.Where("asset.creator_type = 1")
+                    .Where("(asset.creator_id = 1 OR asset.creator_id IN (SELECT user_id FROM user_permission))");
                 // TODO: this used to have clothing filters but I got rid of them in the name of performance
                 // Exact filters are at /services/api/src/controllers/proxy/v1/Catalog.ts:862
             }

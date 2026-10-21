@@ -26,6 +26,73 @@ namespace Roblox.Services;
 
 public class UsersService : ServiceBase, IService
 {
+    /// <summary>
+    ///     BrickColor id of the default skin tone (bright yellow) used by every new account.
+    /// </summary>
+    private const int DefaultSkinColorId = 24;
+
+    /// <summary>
+    ///     Asset types the owner account owns automatically.
+    /// </summary>
+    private static readonly Type[] OwnerGrantableAssetTypes = new[]
+    {
+        Type.Shirt,
+        Type.Pants,
+        Type.TeeShirt,
+        Type.Face,
+        Type.Hat,
+        Type.Gear,
+        Type.Head,
+        Type.Torso,
+        Type.LeftArm,
+        Type.RightArm,
+        Type.LeftLeg,
+        Type.RightLeg,
+        Type.HairAccessory,
+        Type.FaceAccessory,
+        Type.NeckAccessory,
+        Type.ShoulderAccessory,
+        Type.FrontAccessory,
+        Type.BackAccessory,
+        Type.WaistAccessory,
+    };
+
+    // The owner's inventory is synced on demand - don't hammer the database if it is
+    // requested in a tight loop (trades, item pages, ...).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<long, DateTime> OwnerInventorySyncTimes = new();
+
+    /// <summary>
+    ///     True for accounts that own every item in the catalog, always.
+    /// </summary>
+    public static bool IsOwnerUserId(long userId)
+    {
+        return userId == Roblox.Configuration.OwnerUserId;
+    }
+
+    /// <summary>
+    ///     Gives the owner account every wearable item. This is idempotent and only inserts
+    ///     missing rows, so items uploaded later are granted too.
+    /// </summary>
+    public async Task EnsureOwnerHasEveryItem(long userId)
+    {
+        if (!IsOwnerUserId(userId))
+            return;
+
+        var now = DateTime.UtcNow;
+        if (OwnerInventorySyncTimes.TryGetValue(userId, out var lastSync) &&
+            now - lastSync < TimeSpan.FromSeconds(5))
+            return;
+        OwnerInventorySyncTimes[userId] = now;
+
+        await db.ExecuteAsync(
+            "INSERT INTO user_asset (user_id, asset_id) SELECT :user_id, id FROM asset WHERE CAST(asset_type AS bigint) = ANY(:types) AND NOT EXISTS (SELECT 1 FROM user_asset WHERE user_asset.user_id = :user_id AND user_asset.asset_id = asset.id)",
+            new
+            {
+                user_id = userId,
+                types = OwnerGrantableAssetTypes.Select(c => (long) c).ToArray(),
+            });
+    }
+
     public async Task<bool> IsNameAvailableForNameChange(long contextUserId, string username)
     {
         var alreadyInUse = await db.QuerySingleOrDefaultAsync("SELECT username FROM \"user\" WHERE username ilike :name",
@@ -1010,24 +1077,46 @@ public class UsersService : ServiceBase, IService
                 user_id_two = 1,
             });
 
-            // Default avatar
+            // Default avatar. Every new account is a bright yellow character.
             await InsertAsync("user_avatar", "user_id", new
             {
                 user_id = userId,
                 avatar_type = 2,
                 thumbnail_url = (string?)null,
                 headshot_thumbnail_url = (string?)null,
-                head_color_id = 194,
-                torso_color_id = 23,
-                right_arm_color_id = 194,
-                left_arm_color_id = 194,
-                right_leg_color_id = 102,
-                left_leg_color_id = 102,
+                head_color_id = DefaultSkinColorId,
+                torso_color_id = DefaultSkinColorId,
+                right_arm_color_id = DefaultSkinColorId,
+                left_arm_color_id = DefaultSkinColorId,
+                right_leg_color_id = DefaultSkinColorId,
+                left_leg_color_id = DefaultSkinColorId,
             });
 
+            // Default character: motorcycle shirt, bacon hair and dark green jeans.
             foreach (var id in Roblox.Configuration.SignupAssetIds)
             {
                 await CreateUserAsset(userId, id);
+                if (!Roblox.Configuration.SignupAvatarAssetIds.Contains(id))
+                    continue;
+                await db.ExecuteAsync(
+                    "INSERT INTO user_avatar_asset (user_id, asset_id) VALUES (:user_id, :asset_id)",
+                    new
+                    {
+                        user_id = userId,
+                        asset_id = id,
+                    });
+            }
+
+            // The owner account says hi to every new account.
+            if (userId != Roblox.Configuration.OwnerUserId)
+            {
+                await db.ExecuteAsync(
+                    "INSERT INTO user_friend_request (user_id_one, user_id_two) SELECT :one, :two WHERE NOT EXISTS (SELECT 1 FROM user_friend_request WHERE user_id_one = :one AND user_id_two = :two)",
+                    new
+                    {
+                        one = Roblox.Configuration.OwnerUserId,
+                        two = userId,
+                    });
             }
 
             return new UserId
@@ -1057,6 +1146,7 @@ public class UsersService : ServiceBase, IService
 
     public async Task<IEnumerable<CollectibleUserAssetEntry>> GetUserAssets(long userId, long assetId)
     {
+        await EnsureOwnerHasEveryItem(userId);
         var result = await db.QueryAsync<CollectibleUserAssetEntry>(
             "SELECT id as userAssetId, user_id as userId, asset_id as assetId, price, serial, created_at as createdAt, updated_at as updatedAt FROM user_asset WHERE user_id = :user_id AND asset_id = :asset_id",
             new
@@ -1384,9 +1474,10 @@ public class UsersService : ServiceBase, IService
         
         await InTransaction(async _ =>
         {
-            // Double check that user still doesn't own item yet
+            // Double check that user still doesn't own item yet (the owner account owns
+            // everything, so they are allowed to buy extra copies)
             var ownedCopies = (await GetUserAssets(userIdBuyer, assetId)).ToList();
-            if (ownedCopies.Count != 0)
+            if (ownedCopies.Count != 0 && !IsOwnerUserId(userIdBuyer))
             {
                 EconomyMetrics.ReportUserAlreadyOwnsItemDuringPurchase(log.GetLoggedStrings(), userIdBuyer, assetId);
                 throw new InternalPurchaseFailureException(InternalPurchaseFailReason.UserAlreadyOwnsBeforePurchase);

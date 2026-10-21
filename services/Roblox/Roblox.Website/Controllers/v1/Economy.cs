@@ -131,10 +131,12 @@ public class EconomyControllerV1 : ControllerBase
         // Note: A lot of validation is duplicated in both this function and the transaction function. This is done because transactions and extra locks are slow - if someone starts spamming purchases where they don't have enough Robux, they could DOS transaction handling. If we do a ton of IF checks before starting the PG transaction, it's far less likely they'd take down our database (or cause unnecessary locks, breaking purchases for real customers, etc...)
         
         // First, confirm user does not own item already (When purchase normal is used, user can only own one copy of the assetId at any given time)
+        // The owner account owns every item, so they may buy extra copies.
         var ownedCopies = (await services.users.GetUserAssets(safeUserSession.userId, assetId)).ToList();
-        if (ownedCopies.Count != 0)
+        if (ownedCopies.Count != 0 && !UsersService.IsOwnerUserId(safeUserSession.userId))
             throw new BadRequestException(0, "Asset is already owned");
-        if (await services.users.HasUserPurchasedAssetBefore(safeUserSession.userId, assetId))
+        if (!UsersService.IsOwnerUserId(safeUserSession.userId) &&
+            await services.users.HasUserPurchasedAssetBefore(safeUserSession.userId, assetId))
             throw new BadRequestException(0, "Asset has already been purchased");
         // Get the item data
         var details = await services.assets.GetAssetCatalogInfo(assetId);

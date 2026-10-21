@@ -2065,7 +2065,7 @@ Thank you for your understanding,
             if (request.assetTypeId == Type.Face && imageProbe != null)
             {
                 var faceImage = await services.assets.CreateAsset(request.rbxm.FileName,
-                    $"{request.assetTypeId} Image", 1, CreatorType.User, 1, fileData, Type.Image, Genre.All,
+                    $"{request.assetTypeId} Image", userSession.userId, CreatorType.User, userSession.userId, fileData, Type.Image, Genre.All,
                     ModerationStatus.ReviewApproved, DateTime.UtcNow, DateTime.UtcNow);
                 file = BuildDecalModel(faceImage.assetId);
             }
@@ -2085,8 +2085,8 @@ Thank you for your understanding,
             }
         }
 
-        var assetDetails = await services.assets.CreateAsset(request.name, request.description, 1,
-            CreatorType.User, 1, file, request.assetTypeId, request.genre, ModerationStatus.ReviewApproved,
+        var assetDetails = await services.assets.CreateAsset(request.name, request.description, userSession.userId,
+            CreatorType.User, userSession.userId, file, request.assetTypeId, request.genre, ModerationStatus.ReviewApproved,
             DateTime.UtcNow, DateTime.UtcNow, request.robloxAssetId, disableRender);
         if (request.assetTypeId == Type.Package)
         {
@@ -2118,10 +2118,10 @@ Thank you for your understanding,
         if (ok == null) throw new StaffException("Invalid file provided");
         // create clothing asset
         buf.Position = 0;
-        var texture = await services.assets.CreateAsset(request.file.FileName, $"{request.assetTypeId} Image", 1,
-            CreatorType.User, 1, buf, Type.Image, Genre.All, ModerationStatus.ReviewApproved, DateTime.UtcNow, DateTime.UtcNow);
+        var texture = await services.assets.CreateAsset(request.file.FileName, $"{request.assetTypeId} Image", userSession.userId,
+            CreatorType.User, userSession.userId, buf, Type.Image, Genre.All, ModerationStatus.ReviewApproved, DateTime.UtcNow, DateTime.UtcNow);
         // create the asset itself
-        var asset = await services.assets.CreateAsset(request.name, request.description, 1, CreatorType.User, 1,
+        var asset = await services.assets.CreateAsset(request.name, request.description, userSession.userId, CreatorType.User, userSession.userId,
             null, request.assetTypeId, request.genre, ModerationStatus.ReviewApproved, DateTime.UtcNow,
             DateTime.UtcNow, request.robloxAssetId, false, texture.assetId);
         // add market data
@@ -2167,7 +2167,7 @@ Thank you for your understanding,
 
         if (canUpload == false) throw new StaffException("Not authorized to modify this item");
         if (info.assetType == Type.Package) throw new StaffException("Cannot create an asset version for this type");
-        var result = await services.assets.CreateAssetVersion(request.assetId, 1, request.rbxm.OpenReadStream());
+        var result = await services.assets.CreateAssetVersion(request.assetId, userSession.userId, request.rbxm.OpenReadStream());
         services.assets.RenderAsset(request.assetId, info.assetType);
         return result;
     }

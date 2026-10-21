@@ -23,6 +23,8 @@ public class InventoryService : ServiceBase, IService
     public async Task<IEnumerable<CollectibleItemEntry>> GetCollectibleInventory(long userId, Models.Assets.Type? type,
         string sortOrder, int limit, int offset)
     {
+        using var users = ServiceProvider.GetOrCreate<UsersService>(this);
+        await users.EnsureOwnerHasEveryItem(userId);
         var sql = new SqlBuilder();
         var t = sql.AddTemplate(
             "SELECT user_asset.id as userAssetId, serial as serialNumber, user_asset.asset_id as assetId, asset.recent_average_price as recentAveragePrice, asset.price_robux as originalPrice, asset.serial_count as assetStock, asset.asset_type as assetTypeId, asset.name as name FROM user_asset INNER JOIN asset ON asset.id = user_asset.asset_id /**where**/ /**orderby**/ LIMIT :limit OFFSET :offset", new
@@ -46,6 +48,8 @@ public class InventoryService : ServiceBase, IService
 
     public async Task<int> CountInventory(long userId, Models.Assets.Type? type)
     {
+        using var users = ServiceProvider.GetOrCreate<UsersService>(this);
+        await users.EnsureOwnerHasEveryItem(userId);
         if (type == null)
             return (await db.QuerySingleOrDefaultAsync<Dto.Total>(
                 "SELECT COUNT(*) as total FROM user_asset WHERE user_id = :id", new {id = userId})).total;
@@ -56,6 +60,8 @@ public class InventoryService : ServiceBase, IService
     public async Task<IEnumerable<InventoryEntry>> GetInventory(long userId, Models.Assets.Type? type,
         string sortOrder, int limit, int offset)
     {
+        using var users = ServiceProvider.GetOrCreate<UsersService>(this);
+        await users.EnsureOwnerHasEveryItem(userId);
         var sql = new SqlBuilder();
         var t = sql.AddTemplate(
             "SELECT user_asset.id as userAssetId, serial as serialNumber, user_asset.asset_id as assetId, asset.recent_average_price as recentAveragePrice, asset.price_robux as originalPrice, asset.serial_count as assetStock, asset.asset_type as assetTypeId, asset.name as name, asset.is_limited as isLimited, asset.is_limited_unique as isLimitedUnique, asset.creator_id as creatorId, asset.creator_type as creatorType, (CASE WHEN asset.creator_type = 1 THEN u.username ELSE g.name END) as creatorName FROM user_asset INNER JOIN asset ON asset.id = user_asset.asset_id LEFT JOIN \"user\" u ON u.id = asset.creator_id AND asset.creator_type = 1 LEFT JOIN \"group\" g ON g.id = asset.creator_id AND asset.creator_type = 2 /**where**/ /**orderby**/ LIMIT :limit OFFSET :offset", new

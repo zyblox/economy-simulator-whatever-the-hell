@@ -14,6 +14,11 @@ local vipServerOwnerId = 0;
 local isDebugServer = false;
 -- end dyanmically edited
 
+-- How long to wait for the FIRST player to join before giving up. The web
+-- client has to download ~38MB of wasm/data and compile it before it can
+-- connect, so this has to be generous.
+local FIRST_JOIN_GRACE = 300
+
 -- Loaded by StartGameSharedScript --
 pcall(function() game:SetCreatorID(creatorId, creatorType) end)
 --[[
@@ -195,6 +200,10 @@ local playersJoin = 0;
 
 local function shutdown()
 	print("[info] shut down server")
+	-- Stop the activity pings: without them /gs/activity reports us dead and the
+	-- game server manager cleans us up. This is also the only kill switch on
+	-- debug servers, where the real shutdown below is disabled.
+	serverOk = false
 	if isDebugServer then
 		print("Would shut down, but this is a debug server, so shutdown is disabled")
 		return
@@ -308,21 +317,27 @@ spawn(function()
 	while true do
 		wait(30)
 		print("Checking banned players...")
-		if #game:GetService("Players"):GetPlayers() == 0 then
-			print("[warn] no players. m=",hasNoPlayerCount)
-			serverOk = false
-			hasNoPlayerCount = hasNoPlayerCount + 1
+		local playersList = game:GetService("Players"):GetPlayers()
+		if #playersList == 0 then
+			print("[warn] no players. m=",hasNoPlayerCount," everJoined=",playersJoin)
+			-- Only count down towards a shutdown once somebody has joined before.
+			-- While waiting for the first player the heartbeat must keep running
+			-- (otherwise the manager kills us mid-download), and the first-join
+			-- grace timer further down is what shuts us down instead.
+			if playersJoin > 0 then
+				hasNoPlayerCount = hasNoPlayerCount + 1
+				if hasNoPlayerCount >= 3 then
+					print("Server has had no players for over 1.5m, attempt shutdown")
+					pcall(function()
+						shutdown()
+					end)
+				end
+			end
 		else
 			print("game has players, reset mod")
 			hasNoPlayerCount = 0
 		end
-		if hasNoPlayerCount >= 3 then
-			print("Server has had no players for over 1.5m, attempt shutdown")
-			pcall(function()
-				shutdown()
-			end)
-		end
-		getBannedUsersAsync(game:GetService("Players"):GetPlayers())
+		getBannedUsersAsync(playersList)
 	end
 end)
 
@@ -382,10 +397,9 @@ serverOk = true;
 coroutine.wrap(function()
 	pollToReportActivity()
 end)()
--- kill server if nobody joins within 2m of creation
-delay(120, function()
+-- kill server if nobody joins within the first-join grace period
+delay(FIRST_JOIN_GRACE, function()
 	if playersJoin == 0 then
-		serverOk = false
 		shutdown();
 	end
 end)
