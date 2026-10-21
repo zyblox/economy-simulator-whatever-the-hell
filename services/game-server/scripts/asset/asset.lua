@@ -1,7 +1,7 @@
 local assetId = {1234};
 local jobId = "InsertJobIdHere";
 local mode = "R6";
-local baseURL = "http://localhost";
+local baseURL = "https://zyblox.jimhasaburger.com";
 local uploadURL = "UPLOAD_URL_HERE";
 local ScriptContext = game:GetService("ScriptContext");
 local Lighting = game:GetService('Lighting');
@@ -15,7 +15,9 @@ game:GetService('ThumbnailGenerator').GraphicsMode = 2;
 HttpService.HttpEnabled = true;
 ScriptContext.ScriptsDisabled = true
 Lighting.Outlines = false
-ContentProvider:SetBaseUrl('http://localhost')
+ContentProvider:SetBaseUrl(baseURL)
+game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/?id=%d")
+game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
 
     local function render()
         local model = Instance.new("Model");
@@ -39,7 +41,7 @@ ContentProvider:SetBaseUrl('http://localhost')
         -- realistically, Click() is fast enough to be called twice without affecting performance much.
         ThumbnailGenerator:Click('png', 1, 1, true, false)
         -- "fileType", "width", "height", "hideSky", "doCameraZoom"
-        local encoded = ThumbnailGenerator:Click('png', _X_RES_, _Y_RES_, true, false)
+        local encoded = ThumbnailGenerator:Click('png', _X_RES_, _Y_RES_, true, true)
         print("[debug] send post request containing test asset")
 
         local ok, data = pcall(function()
