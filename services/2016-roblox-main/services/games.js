@@ -29,16 +29,9 @@ export const getGameMedia = ({ universeId }) => {
 }
 
 export const launchGame = async ({ placeId }) => {
-  const result = await request('GET', getBaseUrl() + '/game/get-join-script?placeId=' + encodeURIComponent(placeId));
-  const toClick = result.data.joinUrl;
-  const aTag = document.createElement('a');
-  aTag.setAttribute('href', result.data.prefix + '' + result.data.joinScriptUrl);
-  document.body.appendChild(aTag);
-  aTag.click();
-  // delay before deletion is required on some browsers, not sure why
-  setTimeout(() => {
-    aTag.remove();
-  }, 1000);
+  // Launch through the WebPlayer served by the backend at /client.
+  // The player page fetches /game/get-join-script itself using our session cookie.
+  window.location.href = '/client/?placeId=' + encodeURIComponent(placeId);
 }
 
 export const multiGetPlaceDetails = ({ placeIds }) => {
