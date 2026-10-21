@@ -145,6 +145,9 @@ if (!string.IsNullOrWhiteSpace(Roblox.Configuration.WebClientDirectory) &&
     Directory.Exists(Roblox.Configuration.WebClientDirectory))
 {
     var webClientFileProvider = new PhysicalFileProvider(Roblox.Configuration.WebClientDirectory);
+    // .data (WebPlayer.data) has no default MIME mapping, which would 404 it
+    var webClientContentTypes = new FileExtensionContentTypeProvider();
+    webClientContentTypes.Mappings[".data"] = "application/octet-stream";
     app.UseDefaultFiles(new DefaultFilesOptions
     {
         RequestPath = "/client",
@@ -154,6 +157,7 @@ if (!string.IsNullOrWhiteSpace(Roblox.Configuration.WebClientDirectory) &&
     {
         FileProvider = webClientFileProvider,
         RequestPath = "/client",
+        ContentTypeProvider = webClientContentTypes,
         OnPrepareResponse = ctx =>
         {
             ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
