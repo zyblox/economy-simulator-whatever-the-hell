@@ -14,14 +14,16 @@ namespace Roblox.Website.Controllers;
 public class UsersControllerV1 : ControllerBase
 {
     [HttpGet("users/authenticated")]
-    public dynamic GetMySession()
+    public async Task<dynamic> GetMySession()
     {
         if (userSession is null) throw new UnauthorizedException();
+        var isModerator = await Roblox.Website.Filters.StaffFilter.IsStaff(userSession.userId);
         return new
         {
             id = userSession.userId,
             name = userSession.username,
             displayName = userSession.username,
+            isModerator,
         };
     }
 

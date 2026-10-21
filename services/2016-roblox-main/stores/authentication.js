@@ -12,6 +12,7 @@ const AuthenticationStore = createContainer(() => {
   const [username, setUsername] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPending, setIsPending] = useState(true);
+  const [isModerator, setIsModerator] = useState(false);
   const [robux, setRobux] = useState(null);
   const [tix, setTix] = useState(null);
   const [notificationCount, setNotificationCount] = useState({
@@ -30,6 +31,7 @@ const AuthenticationStore = createContainer(() => {
       setUsername(result.name);
       setIsAuthenticated(true);
       setIsPending(false);
+      setIsModerator(!!result.isModerator);
     }).catch(e => {
       setIsPending(false);
     });
@@ -64,6 +66,7 @@ const AuthenticationStore = createContainer(() => {
     username,
     isAuthenticated,
     isPending,
+    isModerator,
 
     robux,
     tix,

@@ -10,6 +10,7 @@ interface IWebsiteConfiguration {
 	content?: string;
 	dockerDisabled?: boolean;
 	websiteBotAuth: string;
+	sudoPassword?: string;
 }
 
 const conf: Readonly<IWebsiteConfiguration> = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../../config.json')).toString())

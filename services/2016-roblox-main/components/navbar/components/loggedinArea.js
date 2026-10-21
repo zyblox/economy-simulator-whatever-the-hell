@@ -88,6 +88,14 @@ const useLoginAreaStyles = createUseStyles({
     marginRight: '20px',
     marginLeft: '5px',
   },
+  shieldIcon: {
+    color: 'white',
+    verticalAlign: 'middle',
+    display: 'inline-block',
+    '&:hover': {
+      color: '#ffd100',
+    },
+  },
 });
 
 const LoggedInArea = props => {
@@ -99,6 +107,17 @@ const LoggedInArea = props => {
   return <div className={`${s.linkContainerCol} `}>
     <div className='row'>
       <div className={`col-12 ${s.linkContainer}`}>
+        {authStore.isModerator ? (
+          <p className={s.text}>
+            <Link href='/admin/'>
+              <a title='Admin Panel' aria-label='Admin Panel'>
+                <svg className={s.shieldIcon} viewBox='0 0 24 24' width='20' height='20' aria-hidden='true'>
+                  <path fill='currentColor' d='M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z' />
+                </svg>
+              </a>
+            </Link>
+          </p>
+        ) : null}
         <p className={s.text} title={authStore.robux.toLocaleString()}>
           <Link href='/My/Money.aspx'>
             <a>

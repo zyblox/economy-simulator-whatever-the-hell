@@ -12,10 +12,53 @@ import * as models from '../models';
 import sharp = require('sharp');
 import uuid = require('uuid');
 import http = require('http');
+import { Stream, Writable } from 'stream';
 let myIp = 'UNKNOWN';
 const dockerEnabled: boolean = !conf.dockerDisabled;
 console.log('[info] dockerEnabled:',dockerEnabled);
 const rccPort = conf.rccPort || 63914; // default: 64989
+
+// Password for sudo, if set. Passed to `sudo -S` via stdin so it never shows up
+// in `ps`/process listings.
+const sudoPassword: string | undefined = conf.sudoPassword;
+
+// Spawn sudo, feeding the password to stdin with -S. Preserves the caller's
+// requested stdout/stderr but always pipes stdin so the password can be written.
+type SudoStdioItem = 'pipe' | 'ignore' | 'inherit' | number | Stream | null | undefined;
+const spawnSudo = (args: string[], options: cp.SpawnOptions = {}): cp.ChildProcessWithoutNullStreams => {
+	const requested = options.stdio;
+	let out: SudoStdioItem = 'inherit';
+	let err: SudoStdioItem = 'inherit';
+	if (Array.isArray(requested)) {
+		out = (requested as SudoStdioItem[])[1] ?? 'inherit';
+		err = (requested as SudoStdioItem[])[2] ?? 'inherit';
+	} else if (requested === 'pipe' || requested === 'ignore') {
+		out = requested;
+		err = requested;
+	}
+	const child: cp.ChildProcess = cp.spawn('/usr/bin/sudo', ['-S', ...args], {
+		...options,
+		stdio: ['pipe', out, err] as cp.StdioOptions,
+	});
+	const stdin = child.stdin as Writable | null;
+	if (sudoPassword !== undefined && stdin) {
+		// Swallow EPIPE if sudo exits without reading stdin (e.g. NOPASSWD/cached).
+		stdin.on('error', () => {});
+		try {
+			stdin.write(sudoPassword + '\n');
+			stdin.end();
+		} catch (e) {}
+	}
+	return child as cp.ChildProcessWithoutNullStreams;
+};
+
+// Sync variant of spawnSudo - feeds the password via the `input` option.
+const spawnSudoSync = (args: string[], options: cp.SpawnSyncOptions = {}): cp.SpawnSyncReturns<string | Buffer> => {
+	return cp.spawnSync('/usr/bin/sudo', ['-S', ...args], {
+		...options,
+		input: sudoPassword !== undefined ? sudoPassword + '\n' : options.input,
+	});
+};
 
 const isPortAvailable = (port: number): Promise<boolean> => {
 	return new Promise((res, rej) => {
@@ -56,11 +99,18 @@ const isPortAvailable = (port: number): Promise<boolean> => {
 	});
 }
 
-const getFreeRccPort = async (): Promise<number> => {
+const getFreeRccPort = async (reserved: number[] = []): Promise<number> => {
 	for (let i = 6001; i < 50000; i++) {
+		// Skip ports already handed out to another game - during RCC startup a
+		// reserved port isn't bound yet, so the OS still reports it as free.
+		if (reserved.includes(i)) {
+			continue;
+		}
 		let avail = await isPortAvailable(i);
 		console.log('[info] port available?',i,avail);
 		if (avail) {
+			// Reserve immediately so a concurrent startRcc can't pick the same port.
+			reserved.push(i);
 			return i;
 		}
 	}
@@ -170,7 +220,7 @@ export default class CommandHandler extends StdExceptions {
 		const rccStopPath = path.join(__dirname, '../../stop-all-rcc.sh');
 		// On startup, we need to kill any running RCC instances - they're probably leftover from a server crash or something.
 		try {
-			let stopRequest = cp.spawnSync('/usr/bin/sudo', [
+			let stopRequest = spawnSudoSync([
 				rccStopPath
 			]);
 			console.log('[info] result for stopping rcc',stopRequest.stdout.toString(),stopRequest.status, stopRequest.stderr.toString());
@@ -193,27 +243,9 @@ export default class CommandHandler extends StdExceptions {
 			return;
 		}
 		console.log('[info] looking for port...');
-		// res port timeout = 1m
-		let start = Date.now();
-		let portToRunOn = await getFreeRccPort();
-		let lastRecPort = portToRunOn;
-		while (this.reservedPorts.includes(portToRunOn)) {
-			console.log('[info] port is already in use',portToRunOn);
-			await sleep(1000);
-			portToRunOn = await getFreeRccPort();
-			let cur = Date.now();
-			// reset timer if getFreeRccPort returns a new port
-			if (lastRecPort !== portToRunOn) {
-				start = Date.now();
-				lastRecPort = portToRunOn;
-			}
-			let diff = cur - start;
-			if (diff > 60*1000) {
-				console.log('[info] port has been reserved for over 1m despite being available, will use it');
-				break
-			}
-		}
-		this.reservedPorts.push(portToRunOn);
+		// getFreeRccPort skips already-reserved ports and reserves the one it
+		// returns, so we don't need a retry loop here anymore.
+		let portToRunOn = await getFreeRccPort(this.reservedPorts);
 		console.log('[info] found port for rcc!',portToRunOn);
 		let rcc: cp.ChildProcessWithoutNullStreams;
 		const dockerPidFileLocation = path.join(__dirname, '../../rcccid-' + portToRunOn);
@@ -229,7 +261,7 @@ export default class CommandHandler extends StdExceptions {
 			try {
 				fs.unlinkSync(dockerPidFileLocation);
 			}catch(e) {}
-			rcc = cp.spawn('/usr/bin/sudo', [path.join(__dirname, '../../start-rcc.sh'), portToRunOn.toString()]);
+			rcc = spawnSudo([path.join(__dirname, '../../start-rcc.sh'), portToRunOn.toString()]);
 		}
 		game.rccClosed = false;
 		rcc.on('message', (msg) => {
@@ -293,7 +325,7 @@ export default class CommandHandler extends StdExceptions {
 							const rccStopPath = path.join(__dirname, '../../stop-rcc.sh');
 							console.log('trying to kill rcc...',rccStopPath,rccCid);
 							// cp.execSync('docker kill ' + rccCid);
-							let proc = cp.spawn('/usr/bin/sudo',[
+							let proc = spawnSudo([
 								rccStopPath,
 								rccCid,
 							], {
@@ -1009,7 +1041,7 @@ export default class CommandHandler extends StdExceptions {
 			await fs.promises.writeFile(inLocation, Buffer.from(base64EncodedFile, 'base64'));
 			// now exec script
 			return new Promise((res, rej) => {
-				let exec = cp.spawn('/usr/bin/sudo', [scriptPath, mode], {
+				let exec = spawnSudo([scriptPath, mode], {
 					stdio: 'inherit',
 				});
 				exec.on('message', (msg) => {

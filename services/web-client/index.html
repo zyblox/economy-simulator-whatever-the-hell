@@ -116,6 +116,56 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
         });
     }
 
+    // Human-readable text for the backend's JoinStatus codes.
+    var RBX_LAUNCH_STATUS_TEXT = {
+        0: "Waiting for a game server to start...",
+        1: "Loading game server...",
+        3: "This game cannot be joined (disabled).",
+        4: "The game server reported an error.",
+        5: "This game has ended.",
+        6: "This game is full.",
+        10: "You left the game.",
+        11: "This game is restricted.",
+        12: "You are not authorized to join this game.",
+    };
+
+    // Poll the place launcher until it reports Joining (status 2), so we can show
+    // "waiting for a game server" etc. instead of a blank load. The wasm fetches the
+    // launcher again on its own once it boots; by then the server is already up.
+    function RBX_waitForJoin(launcherUrl, onStatus) {
+        return new Promise(function (resolve, reject) {
+            var attempts = 0;
+            function poll() {
+                attempts++;
+                fetch(launcherUrl, { credentials: 'same-origin' }).then(function (resp) {
+                    if (!resp.ok) throw new Error('Launcher returned HTTP ' + resp.status);
+                    return resp.json();
+                }).then(function (data) {
+                    // Backend wraps failures as {"errors":[{message}...]}
+                    if (data && data.errors) {
+                        reject(new Error(data.errors.map(function (e) { return e.message; }).join('; ')));
+                        return;
+                    }
+                    var status = data.status;
+                    if (status === 2) { resolve(data); return; }
+                    var text = RBX_LAUNCH_STATUS_TEXT[status] || ('Starting game (status ' + status + ')...');
+                    if (data.message) text += ' ' + data.message;
+                    onStatus(text);
+                    if (status !== 0 && status !== 1) {
+                        reject(new Error(text));
+                        return;
+                    }
+                    setTimeout(poll, 2000);
+                }).catch(function (err) {
+                    if (attempts >= 30) { reject(err); return; }
+                    onStatus('Waiting for a game server to start... (retrying)');
+                    setTimeout(poll, 2000);
+                });
+            }
+            poll();
+        });
+    }
+
     var Module = {
         canvas: null,
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -145,7 +195,7 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
     function RBX_startGame() {
         var loadingMessage = document.createElement("p");
         loadingMessage.setAttribute("class", "loading-text");
-        loadingMessage.innerText = "Loading ROBLOX. This might take a minute depending on your internet connection, server load, and other factors.";
+        loadingMessage.innerText = "Loading ROBLOX. This WILL take a while, and might also bug out. Please be patient and do not close this tab.";
         body.append(loadingMessage);
 
         var canvas = document.createElement("canvas");
@@ -322,6 +372,11 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
             wrapper.append(noPlaceWarning);
         }
         
+        var startWarning = document.createElement("p");
+        startWarning.setAttribute("style", "color: orange; font-weight: bold;");
+        startWarning.innerText = "Heads up: joining WILL take a while, and might also bug out. Please be patient and do not close this tab.";
+        wrapper.append(startWarning);
+
         var acceptButton = document.createElement("p");
         acceptButton.setAttribute("class", "accept-button");
         acceptButton.innerText = "Click to Start Game";
@@ -338,10 +393,19 @@ License: https://github.com/GoogleChromeLabs/wasm-feature-detect/blob/5f715f923c
             ticketMessage.innerText = "Getting join ticket...";
             body.append(ticketMessage);
 
+            var setStatus = function (text) {
+                ticketMessage.innerText = text;
+            };
+
             RBX_fetchJoinScript().then(function (joinScriptUrl) {
-                ticketMessage.remove();
-                window.RBXModule.joinScript = joinScriptUrl;
-                RBX_startGame();
+                setStatus("Contacting game server...");
+                // Poll the launcher until a server is ready so we can show real status
+                // ("waiting for a game server", "game is full", etc.) before the wasm boots.
+                return RBX_waitForJoin(joinScriptUrl, setStatus).then(function () {
+                    ticketMessage.remove();
+                    window.RBXModule.joinScript = joinScriptUrl;
+                    RBX_startGame();
+                });
             }).catch(function (err) {
                 ticketMessage.remove();
                 var errCard = document.createElement("div");
