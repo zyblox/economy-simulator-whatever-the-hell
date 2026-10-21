@@ -1907,6 +1907,10 @@ textarea.form-control {
   margin-bottom: 1.5rem !important;
 }
 
+.ms-2 {
+  margin-left: 0.5rem !important;
+}
+
 .p-0 {
   padding: 0 !important;
 }
@@ -2066,8 +2070,6 @@ textarea.form-control {
     display: none !important;
   }
 }
-
-/*# sourceMappingURL=bootstrap.css.map */
 body {
   font-size: .875rem;
 }
