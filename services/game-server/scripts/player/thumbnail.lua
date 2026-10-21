@@ -1,7 +1,7 @@
 local jobId = "InsertJobIdHere";
 local userId = 65789275746246;
 local mode = "R6";
-local baseURL = "http://localhost";
+local baseURL = "https://zyblox.jimhasaburger.com";
 local uploadURL = "UPLOAD_URL_HERE";
 local ScriptContext = game:GetService("ScriptContext");
 local Lighting = game:GetService('Lighting');
@@ -15,12 +15,11 @@ game:GetService('ThumbnailGenerator').GraphicsMode = 2;
 HttpService.HttpEnabled = true;
 ScriptContext.ScriptsDisabled = true
 Lighting.Outlines = false
-ContentProvider:SetBaseUrl('http://localhost')
+ContentProvider:SetBaseUrl(baseURL)
 -- URL setup was missing entirely in this script (headshot.lua has it); without it every
 -- InsertService/ContentProvider fetch resolves against http://localhost/ (port 80, dead),
 -- so clothing/faces/hats never load: "CURL error Couldn't connect to server (7)"
-game:GetService("ContentProvider"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
-game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
+game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/?id=%d")
 game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
 game:GetService("Players"):SetChatFilterUrl(baseURL .. "/Game/ChatFilter.ashx")
 game:GetService("InsertService"):SetAssetVersionUrl(baseURL .. "/Asset/?assetversionid=%d")

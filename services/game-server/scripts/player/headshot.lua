@@ -1,7 +1,7 @@
 local jobId = "InsertJobIdHere";
 local userId = 65789275746246;
 local mode = 'R6'
-local baseURL = "http://localhost";
+local baseURL = "https://zyblox.jimhasaburger.com";
 local uploadURL = "UPLOAD_URL_HERE";
 
 local function applyMesh(Player, children, limb)
@@ -66,14 +66,13 @@ end
     HttpService.HttpEnabled = true
     ScriptContext.ScriptsDisabled = true
     Lighting.Outlines = false
-    ContentProvider:SetBaseUrl('http://localhost')
-    game:GetService("ContentProvider"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
-    game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
+    ContentProvider:SetBaseUrl(baseURL)
+        game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/?id=%d")
     pcall(function() game:GetService("ScriptInformationProvider"):SetAssetUrl(url .. "/Asset/") end)
     game:GetService("ContentProvider"):SetBaseUrl(baseURL .. "/")
     game:GetService("Players"):SetChatFilterUrl(baseURL .. "/Game/ChatFilter.ashx")
     local Insert = game:GetService("InsertService")
-    game:GetService("InsertService"):SetAssetUrl(baseURL .. "/Asset/?id=%d")
+    game:GetService("InsertService"):SetAssetUrl(baseURL .. "/asset/?id=%d")
 	game:GetService("InsertService"):SetAssetVersionUrl(baseURL .. "/Asset/?assetversionid=%d")
 
     local function render(id)
