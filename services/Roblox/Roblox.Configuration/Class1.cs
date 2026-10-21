@@ -21,6 +21,7 @@ public static class Configuration
     public static string JsonDataDirectory { get; set; }
     public static string AdminBundleDirectory { get; set; }
     public static string EconomyChatBundleDirectory { get; set; }
+    public static string WebClientDirectory { get; set; }
     public static string BaseUrl { get; set; }
     public static string HCaptchaPublicKey { get; set; }
     public static string HCaptchaPrivateKey { get; set; }

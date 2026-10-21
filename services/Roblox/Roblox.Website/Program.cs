@@ -41,6 +41,7 @@ Roblox.Configuration.XmlTemplatesDirectory = configuration.GetSection("Directori
 Roblox.Configuration.JsonDataDirectory = configuration.GetSection("Directories:JsonData").Value;
 Roblox.Configuration.AdminBundleDirectory = configuration.GetSection("Directories:AdminBundle").Value;
 Roblox.Configuration.EconomyChatBundleDirectory = configuration.GetSection("Directories:EconomyChatBundle").Value;
+Roblox.Configuration.WebClientDirectory = configuration.GetSection("Directories:WebClient").Value;
 Roblox.Configuration.BaseUrl = configuration.GetSection("BaseUrl").Value;
 Roblox.Configuration.HCaptchaPublicKey = configuration.GetSection("HCaptcha:Public").Value;
 Roblox.Configuration.HCaptchaPrivateKey = configuration.GetSection("HCaptcha:Private").Value;
@@ -137,6 +138,29 @@ app.UseStaticFiles(new StaticFileOptions
     OnPrepareResponse = prepareResponseForCache,
 });
 #endif
+
+// Web client (WebPlayer). Needs COOP/COEP so the browser is crossOriginIsolated,
+// which the player requires for SharedArrayBuffer (web threads).
+if (!string.IsNullOrWhiteSpace(Roblox.Configuration.WebClientDirectory) &&
+    Directory.Exists(Roblox.Configuration.WebClientDirectory))
+{
+    var webClientFileProvider = new PhysicalFileProvider(Roblox.Configuration.WebClientDirectory);
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        RequestPath = "/client",
+        FileProvider = webClientFileProvider,
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = webClientFileProvider,
+        RequestPath = "/client",
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+        },
+    });
+}
 
 app.UseRobloxSessionMiddleware();
 app.UseRobloxPlayerCorsMiddleware(); // cors varies depending on authentication status, so it must be after session middleware
