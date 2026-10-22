@@ -13,7 +13,7 @@ const useLogoStyles = createUseStyles({
     },
   },
   imgMobile: {
-    backgroundImage: `url(/img/logo_R.svg)`,
+    backgroundImage: `url(/img/ZYBLOXAPPICON.png)`,
     width: '30px',
     height: '30px',
     display: 'block',
