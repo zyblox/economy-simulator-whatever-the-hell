@@ -9,3 +9,7 @@
 services/old-*
 
 services/2016-roblox
+.logs/
+info/
+
+pass.txt

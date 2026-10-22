@@ -525,15 +525,23 @@ namespace Roblox.Website.Controllers
             var accountAgeDays = DateTime.UtcNow.Subtract(userInfo.created).Days;
             var statusIs18OrOver = await services.users.Is18Plus(userId);
             var serverAddress = serverData.domain;
-            // Completely random. IP and Port don't serve a purpose anymore, other than to make the client code happy.
-            var ip = "1.1.1.1";
-            var port = 1111;
 #if DEBUG
             // serverData.domain is already "<domain>:<game port>" in DEBUG builds (see GameServerPort.ApplyIdToUrl);
             // don't hardcode localhost here - clients on other machines can't reach it.
             if (!serverAddress.Contains(':'))
                 serverAddress += ":53640";
 #endif
+
+            // Web clients connect to WebsocketAddress; RakNet clients (desktop/mobile
+            // players) ignore it and connect to MachineAddress:ServerPort instead.
+            // TODO: once game servers are meant to be reachable off-machine, use the
+            // real game server host here instead of localhost.
+            var rakNetPort = 53640;
+            var colonIndex = serverAddress.LastIndexOf(':');
+            if (colonIndex != -1 && int.TryParse(serverAddress.Substring(colonIndex + 1), out var parsedPort))
+                rakNetPort = parsedPort;
+            var ip = "127.0.0.1";
+            var port = rakNetPort;
 
             var placeId = serverData.placeId;
             var uni = (await services.games.MultiGetPlaceDetails(new[] { placeId })).First();
