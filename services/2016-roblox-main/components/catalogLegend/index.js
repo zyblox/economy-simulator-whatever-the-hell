@@ -39,8 +39,8 @@ const CatalogLegend = props => {
         [
           {
             image: '/img/overlay_bcCatalog.png',
-            title: 'Builders Club Only',
-            description: 'Only purchasable by Builders Club members.',
+            title: 'Epic Club Only',
+            description: 'Only purchasable by epic Club members.',
           },
           {
             image: '/img/limitedOverlay_small.png',
@@ -50,7 +50,7 @@ const CatalogLegend = props => {
           {
             image: '/img/limitedUOverlay_small.png',
             title: 'Limited Unique Items',
-            description: 'A limited supply originally sold by ROBLOX. Each unit is labeled with a serial number. Once sold out, owners can re-sell them to other users.',
+            description: 'A limited supply originally sold by ZYBLOX. Each unit is labeled with a serial number. Once sold out, owners can re-sell them to other users.',
           },
         ].map(v => {
           return <LegendEntry image={v.image} key={v.title} title={v.title} description={v.description}></LegendEntry>

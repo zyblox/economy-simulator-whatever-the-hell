@@ -8,19 +8,19 @@
 	const quickFillReasons: { name: string; text: string }[] = [
 		{
 			name: 'TOS Violation',
-			text: 'This account has been closed due to violating Roblox terms of service.',
+			text: 'This account has been closed due to violating Zyblox terms of service.',
 		},
 		{
 			name: 'Bad Username',
-			text: 'Your username is inappropriate for Roblox.',
+			text: 'Your username is inappropriate for Zyblox.',
 		},
 		{
 			name: 'Bad Username (Privacy Issue)',
-			text: 'Your username is not appropriate for Roblox due to privacy concerns. ',
+			text: 'Your username is not appropriate for Zyblox due to privacy concerns. ',
 		},
 		{
 			name: 'Spam',
-			text: 'Do not repeatedly post spam chat or content in Roblox.',
+			text: 'Do not repeatedly post spam chat or content in Zyblox.',
 		},
 		{
 			name: 'Inappropriate Behaviour',
@@ -28,11 +28,11 @@
 		},
 		{
 			name: 'Hate Speech',
-			text: 'This content is not appropriate. Hate speech is not permitted on Roblox.',
+			text: 'This content is not appropriate. Hate speech is not permitted on Zyblox.',
 		},
 		{
 			name: 'Real-Life Information',
-			text: 'Do not ask for or give out personal, real-life, or private information on Roblox.',
+			text: 'Do not ask for or give out personal, real-life, or private information on Zyblox.',
 		},
 		{
 			name: 'Disputed Charges',
@@ -40,7 +40,7 @@
 		},
 		{
 			name: 'USDer',
-			text: 'Your account has been moderated for buying, selling, or trading Robux or virtual Roblox items outside of the Roblox website.',
+			text: 'Your account has been moderated for buying, selling, or trading Robux or virtual Zyblox items outside of the Zyblox website.',
 		},
 		{
 			name: 'Pois Lims',

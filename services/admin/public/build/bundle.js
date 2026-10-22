@@ -114406,19 +114406,19 @@ function instance($$self, $$props, $$invalidate) {
 	const quickFillReasons = [
 		{
 			name: 'TOS Violation',
-			text: 'This account has been closed due to violating Roblox terms of service.'
+			text: 'This account has been closed due to violating Zyblox terms of service.'
 		},
 		{
 			name: 'Bad Username',
-			text: 'Your username is inappropriate for Roblox.'
+			text: 'Your username is inappropriate for Zyblox.'
 		},
 		{
 			name: 'Bad Username (Privacy Issue)',
-			text: 'Your username is not appropriate for Roblox due to privacy concerns. '
+			text: 'Your username is not appropriate for Zyblox due to privacy concerns. '
 		},
 		{
 			name: 'Spam',
-			text: 'Do not repeatedly post spam chat or content in Roblox.'
+			text: 'Do not repeatedly post spam chat or content in Zyblox.'
 		},
 		{
 			name: 'Inappropriate Behaviour',
@@ -114426,11 +114426,11 @@ function instance($$self, $$props, $$invalidate) {
 		},
 		{
 			name: 'Hate Speech',
-			text: 'This content is not appropriate. Hate speech is not permitted on Roblox.'
+			text: 'This content is not appropriate. Hate speech is not permitted on Zyblox.'
 		},
 		{
 			name: 'Real-Life Information',
-			text: 'Do not ask for or give out personal, real-life, or private information on Roblox.'
+			text: 'Do not ask for or give out personal, real-life, or private information on Zyblox.'
 		},
 		{
 			name: 'Disputed Charges',
@@ -114438,7 +114438,7 @@ function instance($$self, $$props, $$invalidate) {
 		},
 		{
 			name: 'USDer',
-			text: 'Your account has been moderated for buying, selling, or trading Robux or virtual Roblox items outside of the Roblox website.'
+			text: 'Your account has been moderated for buying, selling, or trading Robux or virtual Zyblox items outside of the Zyblox website.'
 		},
 		{
 			name: 'Pois Lims',
@@ -124396,7 +124396,7 @@ function create_then_block(ctx) {
 			p1 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.element)("p");
 			a0 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.element)("a");
 			(0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.create_component)(linkicon.$$.fragment);
-			t6 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.text)(" View ROBLOX Profile");
+			t6 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.text)(" View ZYBLOX Profile");
 			t7 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.space)();
 			div10 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.element)("div");
 			div9 = (0,svelte_internal__WEBPACK_IMPORTED_MODULE_0__.element)("div");
@@ -134409,7 +134409,7 @@ function instance($$self, $$props, $$invalidate) {
 	const itemRbFooter = `We realize you may not have been aware of how these items were originally made available and in such cases, no further moderation action will be placed on your account. However, please be aware that any willful participation in account theft, phishing, or other serious Terms of Service violations, will result in the termination of the associated accounts.
 Thank you,
 
--The Roblox Team`;
+-The Zyblox Team`;
 
 	let { userId } = $$props;
 
@@ -134454,7 +134454,7 @@ The prize has already been awarded to your account, so you do not have to do any
 
 Thank you,
 
-- The Roblox Team`
+- The Zyblox Team`
 		}
 	];
 
