@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     golang-go \
     && curl -fsSL https://nodesource.com | bash - \
-    && apt-get install -y组件 nodejs \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Set our application working directory
