@@ -1,5 +1,5 @@
 # Start with Microsoft's official .NET SDK image so .NET is natively present
-FROM ://microsoft.com
+FROM mcr.microsoft.net/dotnet/sdk:7.0-bullseye-slim
 
 # Install Node.js and Go dependencies together
 RUN apt-get update && apt-get install -y \
