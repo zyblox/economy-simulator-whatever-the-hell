@@ -1,10 +1,12 @@
-# Start with a Node base image since your primary framework is Node
-FROM node:18-bullseye
+# Start with Microsoft's official .NET SDK image so .NET is natively present
+FROM ://microsoft.com
 
-# Install Go and .NET SDK dependencies natively
+# Install Node.js and Go dependencies together
 RUN apt-get update && apt-get install -y \
+    curl \
     golang-go \
-    dotnet-sdk-7.0 \
+    && curl -fsSL https://nodesource.com | bash - \
+    && apt-get install -y组件 nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Set our application working directory
@@ -13,7 +15,7 @@ WORKDIR /app
 # Copy all repository files into the container
 COPY . .
 
-# Grant execution rights to the orchestration script
+# Grant execution rights to your master orchestration script
 RUN chmod +x startall.sh
 
 # Expose the port your server listens on
